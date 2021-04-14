@@ -31,12 +31,11 @@ class ATPoseNode(DTROS):
         Configuration:
 
         Publisher:
-            ~encoder_localization (:obj:`PoseStamped`): The computed position
+            ~/rectified_image (:obj:`Image`): The rectified image
+            ~at_localization (:obj:`PoseStamped`): The computed position broadcasted in TFs
         Subscribers:
-            ~/left_wheel_encoder_node/tick (:obj:`WheelEncoderStamped`):
-                encoder ticks
-            ~/right_wheel_encoder_node/tick (:obj:`WheelEncoderStamped`):
-                encoder ticks
+            ~/camera_node/image/compressed (:obj:`CompressedImage`): Observation from robot
+       
     """
 
     def __init__(self, node_name):
@@ -117,58 +116,65 @@ class ATPoseNode(DTROS):
             self.logerr('Could not decode image: %s' % e)
             return
 
-        gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)
-        # print("new_cam", new_cam)
+        gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)        
 
-        # cameraMatrix = numpy.array(new_cam['K']).reshape((3,3))
+        
         camera_params = ( new_cam[0,0], new_cam[1,1], new_cam[0,2], new_cam[1,2] )
         tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
         
         
-        # print("Detected pose", tags[0].pose_R)
 
         if(len(tags)>0):
-            print("Detected: ID ", tags[0].tag_id)
-            # pose = PoseStamped()
-
-            # pose.header.stamp = rospy.Time.now()
-            # pose.header.frame_id = 'map'
-
-            # pose.pose.position.x = tags[0].pose_t[0]
-            # pose.pose.position.y = tags[0].pose_t[1]
-            # pose.pose.position.z = tags[0].pose_t[2]
+            print("Detected: Tag ID ", tags[0].tag_id)
+            
             pose = np.identity(4)
             pose[0:3, 0:3] = tags[0].pose_R
             
             q_tag = quaternion_from_matrix(pose)
-            # pose.pose.orientation.x = q_tag[0]
-            # pose.pose.orientation.y = q_tag[1]
-            # pose.pose.orientation.z = q_tag[2]
-            # pose.pose.orientation.w = q_tag[3]
 
+            # Map to ATag
+            br0 = tf2_ros.StaticTransformBroadcaster()
+            t0 = TransformStamped()
+
+            t0.header.stamp = rospy.Time.now()
+            t0.header.frame_id = "map"
+            t0.child_frame_id = f'april_tag_{tags[0].tag_id}'
+            t0.transform.translation.x = 0
+            t0.transform.translation.y = 0
+            t0.transform.translation.z = 0.075
+            t0.transform.rotation.x = 0
+            t0.transform.rotation.y = 0
+            t0.transform.rotation.z = 0
+            t0.transform.rotation.w = 1
+
+            br0.sendTransform(t0)
+
+            # ATag to ATag cam (this is because AprilTAG pose is different from physical)
             br1 = tf2_ros.StaticTransformBroadcaster()
             t1 = TransformStamped()
 
-            t1.header.stamp = image_msg.header.stamp
-            t1.header.frame_id = "map"
-            t1.child_frame_id = f'april_tag_{tags[0].tag_id}'
+            t1.header.stamp = rospy.Time.now()
+            t1.header.frame_id = f'april_tag_{tags[0].tag_id}'
+            t1.child_frame_id = f'april_tag_cam_{tags[0].tag_id}'
             t1.transform.translation.x = 0
             t1.transform.translation.y = 0
-            t1.transform.translation.z = 0.075
-            t1.transform.rotation.x = 0
-            t1.transform.rotation.y = 0
-            t1.transform.rotation.z = 0
-            t1.transform.rotation.w = 1
+            t1.transform.translation.z = 0
+            quat1 = tf_conversions.transformations.quaternion_from_euler(-90*math.pi/180, 0, 90*math.pi/180)
+            t1.transform.rotation.x = quat1[0]
+            t1.transform.rotation.y = quat1[1]
+            t1.transform.rotation.z = quat1[2]
+            t1.transform.rotation.w = quat1[3]
 
             br1.sendTransform(t1)
 
 
+            # ATag cam to camera_rgb_link (again this is internal cam frame)
             br2 = tf2_ros.TransformBroadcaster()
             t2 = TransformStamped()
 
             t2.header.stamp = image_msg.header.stamp
-            t2.header.frame_id = f'april_tag_{tags[0].tag_id}'
-            t2.child_frame_id = "camera_link"
+            t2.header.frame_id = f'april_tag_cam_{tags[0].tag_id}'
+            t2.child_frame_id = "camera_rgb_link"
             t2.transform.translation.x = tags[0].pose_t[0]
             t2.transform.translation.y = tags[0].pose_t[1]
             t2.transform.translation.z = tags[0].pose_t[2]            
@@ -179,165 +185,44 @@ class ATPoseNode(DTROS):
 
             br2.sendTransform(t2)
 
-
+            # camera_rgb_link to camera_link (internal cam frame to physical cam frame)
             br3 = tf2_ros.StaticTransformBroadcaster()
             t3 = TransformStamped()
 
             t3.header.stamp = image_msg.header.stamp
-            t3.header.frame_id = "camera_link"
-            t3.child_frame_id = "at_base_link"
-            t3.transform.translation.x = -0.066
+            t3.header.frame_id = "camera_rgb_link"
+            t3.child_frame_id = "camera_link"
+            t3.transform.translation.x = 0
             t3.transform.translation.y = 0
-            t3.transform.translation.z = -0.106
-            quat = tf_conversions.transformations.quaternion_from_euler(0, -15*math.pi/180, 0)
-            t3.transform.rotation.x = quat[0]
-            t3.transform.rotation.y = quat[1]
-            t3.transform.rotation.z = quat[2]
-            t3.transform.rotation.w = quat[3]
+            t3.transform.translation.z = 0
+            quat3 = tf_conversions.transformations.quaternion_from_euler(0, 90*math.pi/180, -90*math.pi/180)
+            t3.transform.rotation.x = quat3[0]
+            t3.transform.rotation.y = quat3[1]
+            t3.transform.rotation.z = quat3[2]
+            t3.transform.rotation.w = quat3[3]
 
             br3.sendTransform(t3)
 
+            # camera_link to base_link of robot 
+            br4 = tf2_ros.StaticTransformBroadcaster()
+            t4 = TransformStamped()
 
+            t4.header.stamp = image_msg.header.stamp
+            t4.header.frame_id = "camera_link"
+            t4.child_frame_id = "at_base_link"
+            t4.transform.translation.x = -0.066
+            t4.transform.translation.y = 0
+            t4.transform.translation.z = -0.106
+            quat4 = tf_conversions.transformations.quaternion_from_euler(0, -15*math.pi/180, 0)
+            t4.transform.rotation.x = quat4[0]
+            t4.transform.rotation.y = quat4[1]
+            t4.transform.rotation.z = quat4[2]
+            t4.transform.rotation.w = quat4[3]
 
-            # broadcaster = tf2_ros.StaticTransformBroadcaster()
-            # static_transformStamped = TransformStamped()
+            br4.sendTransform(t4)
+        else:
+            print("Detected: Tag ID - None")
 
-            # static_transformStamped.header.stamp = image_msg.header.stamp
-            # static_transformStamped.header.frame_id = "camera_link"
-            # static_transformStamped.child_frame_id = f'april_tag_{tags[0].tag_id}'
-
-            # static_transformStamped.transform.translation.x = tags[0].pose_t[0]
-            # static_transformStamped.transform.translation.y = tags[0].pose_t[1]
-            # static_transformStamped.transform.translation.z = tags[0].pose_t[2]
-
-            # # quat = tf.transformations.quaternion_from_euler(
-            # #        float(sys.argv[5]),float(sys.argv[6]),float(sys.argv[7]))
-            # static_transformStamped.transform.rotation.x = q_tag[0]
-            # static_transformStamped.transform.rotation.y = q_tag[1]
-            # static_transformStamped.transform.rotation.z = q_tag[2]
-            # static_transformStamped.transform.rotation.w = q_tag[3]
-
-            # broadcaster.sendTransform(static_transformStamped)
-        # print("Detected pose_R:", tags[0].pose_R)
-        # print("Detected pose_t:", tags[0].pose_t)
-        # newCameraMatrix = cv2.getOptimalNewCameraMatrix(cameraMatrix, 
-        #                                         distCoeffs, 
-        #                                         (640, 480), 
-        #                                         1.0)
-        # cv2.initUndistortRectifyMap(cameraMatrix, 
-        #                             distCoeffs, 
-        #                             np.eye(3), 
-        #                             newCameraMatrix, 
-        #                             (640, 480), 
-        #                             cv2.CV_32FC1)
-        # cv2.remap(compressed_image, map1, map2, cv2.INTER_LINEAR)
-        
-
-        # ticks = msg_encoder.data
-
-        # delta_ticks = ticks-self.left_tick_prev
-        # self.left_tick_prev = ticks
-
-        # total_ticks = msg_encoder.resolution
-
-        # # Assuming no wheel slipping
-        # self.delta_phi_left = 2*np.pi*delta_ticks/total_ticks
-
-        # compute the new pose
-        # self.posePublisher(msg_encoder.header.stamp)
-
-    # def cbRightEncoder(self, msg_encoder):
-    #     """
-    #         Wheel encoder callback, the rotation of the wheel.
-    #         Args:
-    #             msg_encoder (:obj:`WheelEncoderStamped`) encoder ROS message.
-    #     """
-    #     ticks = msg_encoder.data
-
-    #     delta_ticks = ticks-self.right_tick_prev
-    #     self.right_tick_prev = ticks
-
-    #     total_ticks = msg_encoder.resolution
-
-    #     # Assuming no wheel slipping
-    #     self.delta_phi_right = 2*np.pi*delta_ticks/total_ticks
-
-    #     # compute the new pose
-    #     self.posePublisher(msg_encoder.header.stamp)
-
-    # def posePublisher(self, time_stamp):
-    #     """
-    #         Publish the pose of the Duckiebot given by the kinematic model
-    #             using the encoders.
-    #         Publish:
-    #             ~/encoder_localization (:obj:`PoseStamped`): Duckiebot pose.
-    #     """
-    #     self.x_curr, self.y_curr, self.theta_curr = odometry_activity.poseEstimation(
-    #         self.R, self.L,
-    #         self.x_prev, self.y_prev, self.theta_prev,
-    #         self.delta_phi_left, self.delta_phi_right)
-
-    #     self.x_prev = self.x_curr
-    #     self.y_prev = self.y_curr
-    #     self.theta_prev = self.theta_curr
-
-    #     pose = PoseStamped()
-
-    #     # pose.header.stamp = rospy.Time.now()
-    #     # pose.header.frame_id = 'map'
-
-    #     # pose.pose.position.x = self.x_curr
-    #     # pose.pose.position.y = self.y_curr
-    #     # pose.pose.position.z = 0
-
-    #     # pose.pose.orientation.x = 0
-    #     # pose.pose.orientation.y = 0
-    #     # pose.pose.orientation.z = np.sin(self.theta_curr/2)
-    #     # pose.pose.orientation.w = np.cos(self.theta_curr/2)
-
-    #     # self.db_estimated_pose.publish(pose)
-
-    #     odom = Odometry()
-    #     odom.header.frame_id = "map"
-    #     odom.header.stamp = rospy.Time.now()
-
-    #     odom.pose.pose.position.x = self.x_curr
-    #     odom.pose.pose.position.y = self.y_curr
-    #     odom.pose.pose.position.z = 0
-
-    #     odom.pose.pose.orientation.x = 0
-    #     odom.pose.pose.orientation.y = 0
-    #     odom.pose.pose.orientation.z = np.sin(self.theta_curr/2)
-    #     odom.pose.pose.orientation.w = np.cos(self.theta_curr/2)
-
-    #     #odom.pose.covariance = np.diag([1e-2, 1e-2, 1e-2, 1e3, 1e3, 1e-1]).ravel()
-    #     #odom.twist.twist.linear.x = self._lin_vel
-    #     #odom.twist.twist.angular.z = self._ang_vel
-    #     #odom.twist.covariance = np.diag([1e-2, 1e3, 1e3, 1e3, 1e3, 1e-2]).ravel()
-        
-    #     self.db_estimated_pose.publish(odom)
-
-    #     br = tf2_ros.TransformBroadcaster()
-    #     t = TransformStamped()
-
-    #     t.header.stamp = time_stamp
-    #     t.header.frame_id = "map"
-    #     t.child_frame_id = "encoder_base_link"
-    #     t.transform.translation.x = self.x_curr
-    #     t.transform.translation.y = self.y_curr
-    #     t.transform.translation.z = 0.0
-    #     # q = tf_conversions.transformations.quaternion_from_euler(0, 0, msg.theta)
-    #     t.transform.rotation.x = 0
-    #     t.transform.rotation.y = 0
-    #     t.transform.rotation.z = np.sin(self.theta_curr/2)
-    #     t.transform.rotation.w = np.cos(self.theta_curr/2)
-
-    #     br.sendTransform(t) 
-
-
-    #
-    # Pose estimation is the function that is created by the user.
-    #
 
     def onShutdown(self):
         super(EncoderPoseNode, self).onShutdown()
@@ -349,8 +234,3 @@ if __name__ == "__main__":
     at_pose_node = ATPoseNode(node_name='my_at_pose_node')
     # Keep it spinning
     rospy.spin()
-    # try:
-        # rospy.spin()
-    # except KeyboardInterrupt:
-        # print("Shutting down")
-    # cv2.destroyAllWindows()
