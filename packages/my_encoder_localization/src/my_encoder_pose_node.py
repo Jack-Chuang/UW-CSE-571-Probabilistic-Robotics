@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
 import rospy
+import math
 
 from duckietown.dtros import DTROS, NodeType, TopicType
 from duckietown_msgs.msg import WheelEncoderStamped
@@ -192,7 +193,23 @@ class EncoderPoseNode(DTROS):
         t.transform.rotation.z = np.sin(self.theta_curr/2)
         t.transform.rotation.w = np.cos(self.theta_curr/2)
 
+        br2 = tf2_ros.TransformBroadcaster()
+        t2 = TransformStamped()
+
+        t2.header.stamp = time_stamp
+        t2.header.frame_id = "encoder_base_link"
+        t2.child_frame_id = "camera_link"
+        t2.transform.translation.x = 0.066
+        t2.transform.translation.y = 0
+        t2.transform.translation.z = 0.106
+        quat = tf_conversions.transformations.quaternion_from_euler(0, 105*math.pi/180, 0)
+        t2.transform.rotation.x = quat[0]
+        t2.transform.rotation.y = quat[1]
+        t2.transform.rotation.z = quat[2]
+        t2.transform.rotation.w = quat[3]
+
         br.sendTransform(t) 
+        br2.sendTransform(t2)
 
 
     #

@@ -18,8 +18,9 @@ dt-launchfile-init
 # sleep 5
 # dt-exec rosrun my_package my_publisher_node.py
 # dt-exec rosrun my_package my_subscriber_node.py
-dt-exec roslaunch my_package multiple_nodes.launch veh:=$VEHICLE_NAME
+# dt-exec roslaunch my_package multiple_nodes.launch veh:=$VEHICLE_NAME
 dt-exec roslaunch my_encoder_localization my_encoder_pose_node.launch veh:=$VEHICLE_NAME
+dt-exec roslaunch my_at_localization my_at_pose_node.launch veh:=$VEHICLE_NAME
 
 
 # ----------------------------------------------------------------------------
