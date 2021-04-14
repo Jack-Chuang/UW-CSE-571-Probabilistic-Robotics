@@ -146,25 +146,78 @@ class ATPoseNode(DTROS):
             # pose.pose.orientation.z = q_tag[2]
             # pose.pose.orientation.w = q_tag[3]
 
-            broadcaster = tf2_ros.StaticTransformBroadcaster()
-            static_transformStamped = TransformStamped()
+            br1 = tf2_ros.StaticTransformBroadcaster()
+            t1 = TransformStamped()
 
-            static_transformStamped.header.stamp = image_msg.header.stamp
-            static_transformStamped.header.frame_id = "camera_link"
-            static_transformStamped.child_frame_id = f'april_tag_{tags[0].tag_id}'
+            t1.header.stamp = image_msg.header.stamp
+            t1.header.frame_id = "map"
+            t1.child_frame_id = f'april_tag_{tags[0].tag_id}'
+            t1.transform.translation.x = 0
+            t1.transform.translation.y = 0
+            t1.transform.translation.z = 0.075
+            t1.transform.rotation.x = 0
+            t1.transform.rotation.y = 0
+            t1.transform.rotation.z = 0
+            t1.transform.rotation.w = 1
 
-            static_transformStamped.transform.translation.x = tags[0].pose_t[0]
-            static_transformStamped.transform.translation.y = tags[0].pose_t[1]
-            static_transformStamped.transform.translation.z = tags[0].pose_t[2]
+            br1.sendTransform(t1)
 
-            # quat = tf.transformations.quaternion_from_euler(
-            #        float(sys.argv[5]),float(sys.argv[6]),float(sys.argv[7]))
-            static_transformStamped.transform.rotation.x = q_tag[0]
-            static_transformStamped.transform.rotation.y = q_tag[1]
-            static_transformStamped.transform.rotation.z = q_tag[2]
-            static_transformStamped.transform.rotation.w = q_tag[3]
 
-            broadcaster.sendTransform(static_transformStamped)
+            br2 = tf2_ros.TransformBroadcaster()
+            t2 = TransformStamped()
+
+            t2.header.stamp = image_msg.header.stamp
+            t2.header.frame_id = f'april_tag_{tags[0].tag_id}'
+            t2.child_frame_id = "camera_link"
+            t2.transform.translation.x = tags[0].pose_t[0]
+            t2.transform.translation.y = tags[0].pose_t[1]
+            t2.transform.translation.z = tags[0].pose_t[2]            
+            t2.transform.rotation.x = q_tag[0]
+            t2.transform.rotation.y = q_tag[1]
+            t2.transform.rotation.z = q_tag[2]
+            t2.transform.rotation.w = q_tag[3]
+
+            br2.sendTransform(t2)
+
+
+            br3 = tf2_ros.StaticTransformBroadcaster()
+            t3 = TransformStamped()
+
+            t3.header.stamp = image_msg.header.stamp
+            t3.header.frame_id = "camera_link"
+            t3.child_frame_id = "at_base_link"
+            t3.transform.translation.x = -0.066
+            t3.transform.translation.y = 0
+            t3.transform.translation.z = -0.106
+            quat = tf_conversions.transformations.quaternion_from_euler(0, -15*math.pi/180, 0)
+            t3.transform.rotation.x = quat[0]
+            t3.transform.rotation.y = quat[1]
+            t3.transform.rotation.z = quat[2]
+            t3.transform.rotation.w = quat[3]
+
+            br3.sendTransform(t3)
+
+
+
+            # broadcaster = tf2_ros.StaticTransformBroadcaster()
+            # static_transformStamped = TransformStamped()
+
+            # static_transformStamped.header.stamp = image_msg.header.stamp
+            # static_transformStamped.header.frame_id = "camera_link"
+            # static_transformStamped.child_frame_id = f'april_tag_{tags[0].tag_id}'
+
+            # static_transformStamped.transform.translation.x = tags[0].pose_t[0]
+            # static_transformStamped.transform.translation.y = tags[0].pose_t[1]
+            # static_transformStamped.transform.translation.z = tags[0].pose_t[2]
+
+            # # quat = tf.transformations.quaternion_from_euler(
+            # #        float(sys.argv[5]),float(sys.argv[6]),float(sys.argv[7]))
+            # static_transformStamped.transform.rotation.x = q_tag[0]
+            # static_transformStamped.transform.rotation.y = q_tag[1]
+            # static_transformStamped.transform.rotation.z = q_tag[2]
+            # static_transformStamped.transform.rotation.w = q_tag[3]
+
+            # broadcaster.sendTransform(static_transformStamped)
         # print("Detected pose_R:", tags[0].pose_R)
         # print("Detected pose_t:", tags[0].pose_t)
         # newCameraMatrix = cv2.getOptimalNewCameraMatrix(cameraMatrix, 

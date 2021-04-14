@@ -142,25 +142,10 @@ class EncoderPoseNode(DTROS):
         self.y_prev = self.y_curr
         self.theta_prev = self.theta_curr
 
-        pose = PoseStamped()
-
-        # pose.header.stamp = rospy.Time.now()
-        # pose.header.frame_id = 'map'
-
-        # pose.pose.position.x = self.x_curr
-        # pose.pose.position.y = self.y_curr
-        # pose.pose.position.z = 0
-
-        # pose.pose.orientation.x = 0
-        # pose.pose.orientation.y = 0
-        # pose.pose.orientation.z = np.sin(self.theta_curr/2)
-        # pose.pose.orientation.w = np.cos(self.theta_curr/2)
-
-        # self.db_estimated_pose.publish(pose)
 
         odom = Odometry()
         odom.header.frame_id = "map"
-        odom.header.stamp = rospy.Time.now()
+        odom.header.stamp = time_stamp
 
         odom.pose.pose.position.x = self.x_curr
         odom.pose.pose.position.y = self.y_curr
@@ -170,14 +155,9 @@ class EncoderPoseNode(DTROS):
         odom.pose.pose.orientation.y = 0
         odom.pose.pose.orientation.z = np.sin(self.theta_curr/2)
         odom.pose.pose.orientation.w = np.cos(self.theta_curr/2)
-
-        #odom.pose.covariance = np.diag([1e-2, 1e-2, 1e-2, 1e3, 1e3, 1e-1]).ravel()
-        #odom.twist.twist.linear.x = self._lin_vel
-        #odom.twist.twist.angular.z = self._ang_vel
-        #odom.twist.covariance = np.diag([1e-2, 1e3, 1e3, 1e3, 1e3, 1e-2]).ravel()
         
         self.db_estimated_pose.publish(odom)
-
+        # Map - Baselinke TF
         br = tf2_ros.TransformBroadcaster()
         t = TransformStamped()
 
@@ -193,7 +173,8 @@ class EncoderPoseNode(DTROS):
         t.transform.rotation.z = np.sin(self.theta_curr/2)
         t.transform.rotation.w = np.cos(self.theta_curr/2)
 
-        br2 = tf2_ros.TransformBroadcaster()
+        # Baselink - Cameralink TF
+        br2 = tf2_ros.StaticTransformBroadcaster()
         t2 = TransformStamped()
 
         t2.header.stamp = time_stamp
@@ -202,7 +183,7 @@ class EncoderPoseNode(DTROS):
         t2.transform.translation.x = 0.066
         t2.transform.translation.y = 0
         t2.transform.translation.z = 0.106
-        quat = tf_conversions.transformations.quaternion_from_euler(0, 105*math.pi/180, 0)
+        quat = tf_conversions.transformations.quaternion_from_euler(0, 15*math.pi/180, 0)
         t2.transform.rotation.x = quat[0]
         t2.transform.rotation.y = quat[1]
         t2.transform.rotation.z = quat[2]
@@ -212,30 +193,10 @@ class EncoderPoseNode(DTROS):
         br2.sendTransform(t2)
 
 
-    #
-    # Pose estimation is the function that is created by the user.
-    #
 
     def onShutdown(self):
         super(EncoderPoseNode, self).onShutdown()
-
-    # def handle_turtle_pose(selfmsg, turtlename):
-    #     br = tf2_ros.TransformBroadcaster()
-    #     t = geometry_msgs.msg.TransformStamped()
-
-    #     t.header.stamp = rospy.Time.now()
-    #     t.header.frame_id = "world"
-    #     t.child_frame_id = turtlename
-    #     t.transform.translation.x = msg.x
-    #     t.transform.translation.y = msg.y
-    #     t.transform.translation.z = 0.0
-    #     q = tf_conversions.transformations.quaternion_from_euler(0, 0, msg.theta)
-    #     t.transform.rotation.x = q[0]
-    #     t.transform.rotation.y = q[1]
-    #     t.transform.rotation.z = q[2]
-    #     t.transform.rotation.w = q[3]
-
-    #     br.sendTransform(t)        
+     
 
 
 if __name__ == "__main__":
