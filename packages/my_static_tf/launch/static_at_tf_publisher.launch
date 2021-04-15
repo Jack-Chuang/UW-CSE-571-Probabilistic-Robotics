@@ -1,0 +1,9 @@
+<launch>
+	<arg name="pkg_name" default="my_static_tf" doc="name of the package"/>
+	<arg name="node_name" default="static_at_tf_publisher" doc="name of the node"/>
+	<arg name="veh" doc="Name of vehicle. ex: megaman"/>
+    <group ns="$(arg veh)">
+		<node pkg="$(arg pkg_name)" type="$(arg node_name).py" name="$(arg node_name)" output="screen" required="true"/>
+	</group>
+
+</launch>

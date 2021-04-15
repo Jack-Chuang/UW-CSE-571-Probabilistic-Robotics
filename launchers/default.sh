@@ -16,11 +16,12 @@ dt-launchfile-init
 # dt-exec echo "This is an empty launch script. Update it to launch your application."
 # roscore &
 # sleep 5
-# dt-exec rosrun my_package my_publisher_node.py
+# dt-exec rosrun my_package static_at_tf_publisher.py
 # dt-exec rosrun my_package my_subscriber_node.py
 # dt-exec roslaunch my_package multiple_nodes.launch veh:=$VEHICLE_NAME
 # dt-exec roslaunch my_encoder_localization my_encoder_pose_node.launch veh:=$VEHICLE_NAME
 dt-exec roslaunch my_at_localization my_at_pose_node.launch veh:=$VEHICLE_NAME
+dt-exec roslaunch my_static_tf static_at_tf_publisher.launch veh:=$VEHICLE_NAME
 
 
 # ----------------------------------------------------------------------------

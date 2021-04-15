@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import os
+
 import rospy
 from duckietown.dtros import DTROS, NodeType
 from std_msgs.msg import String
+
 
 class MyPublisherNode(DTROS):
 
@@ -21,6 +23,7 @@ class MyPublisherNode(DTROS):
             rospy.loginfo("Publishing message: '%s'" % message)
             self.pub.publish(message)
             rate.sleep()
+
 
 if __name__ == '__main__':
     # create the node
