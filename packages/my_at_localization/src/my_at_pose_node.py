@@ -20,8 +20,6 @@ from sensor_msgs.msg import Image
 from tf.transformations import *
 
 
-# import geometry_msgs
-
 class ATPoseNode(DTROS):
     """
         Computes an estimate of the Duckiebot pose using the wheel encoders.
@@ -85,6 +83,12 @@ class ATPoseNode(DTROS):
 
         self.log("Initialized!")
 
+        self.tag_dict = dict()
+        self._correct_tag_ids = {32: 32, 33: 31, 65: 61, 31: 33, 57: 57, 61: 65, 10: 11, 11: 10, 9: 9, 24: 26, 25: 25, 26: 24}
+
+    def fetch_tag_id(self, tag):
+        return self._correct_tag_ids[tag.tag_id]
+
     def getCameraInfo(self, cam_msg):
         if (self.camera_info == None):
             self.camera_info = cam_msg
@@ -129,15 +133,14 @@ class ATPoseNode(DTROS):
         br.sendTransform(ts)
 
     def _broadcast_detected_tag(self, image_msg, tag):
-        print("Detected: Tag ID ", tag.tag_id)
-
         pose = np.identity(4)
         pose[0:3, 0:3] = tag.pose_R
 
         q_tag = quaternion_from_matrix(pose)
+        tag_id = self.fetch_tag_id(tag)
 
-        tag_frame_id = 'april_tag_{}'.format(tag.tag_id)
-        tag_cam_frame_id = 'april_tag_cam_{}'.format(tag.tag_id)
+        tag_frame_id = 'april_tag_{}'.format(tag_id)
+        tag_cam_frame_id = 'april_tag_cam_{}'.format(tag_id)
         camera_rgb_link_frame_id = 'camera_rgb_link'
         camera_link_frame_id = 'camera_link'
         base_link_frame_id = 'at_base_link'
@@ -205,24 +208,39 @@ class ATPoseNode(DTROS):
         gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)
 
         camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
-        tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
-        tag_ids = list(map(lambda x: x.tag_id, tags))
+        detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
+        detected_tag_ids = list(map(lambda x: self.fetch_tag_id(x), detected_tags))
 
-        if len(tags) > 0:
-            for tag in tags:
-                self._broadcast_detected_tag(image_msg, tag)
-        else:
-            print("Detected: Tag ID - None")
+        for tag_id, tag in zip(detected_tag_ids, detected_tags):
+            print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp, rospy.Time.now()))
+            self.tag_dict[tag_id] = tag
 
-        ref_tag_ids = {32, 33}
-        if all(tag in tag_ids for tag in ref_tag_ids):
-            tag32_frame_id = 'april_tag_{}'.format(32)
-            tag33_frame_id = 'april_tag_{}'.format(33)
+        for tag_id, tag in self.tag_dict.items():
+            self._broadcast_detected_tag(image_msg, tag)
+
+        transform_dict = {
+            (31, 32): ((0, 0.5, 0), (0, 0, 0)),
+            (31, 65): ((0.5, 0.25, 0), (0, 0, 0))
+        }
+
+        for cand_tag_ids, transform_params in transform_dict.items():
+            tag_frame_ids = list(map(lambda x: 'april_tag_{}'.format(x), cand_tag_ids))
             self._broadcast_tf(
-                parent_frame_id=tag33_frame_id,
-                child_frame_id=tag32_frame_id,
-                translations=(0, 0.5, 0)
+                parent_frame_id=tag_frame_ids[0],
+                child_frame_id=tag_frame_ids[1],
+                translations=transform_params[0],
+                euler_angles=transform_params[1]
             )
+
+        # ref_tag_ids = {31, 32}
+        # if all(tag in self.tag_dict.keys() for tag in ref_tag_ids):
+        #     tag31_frame_id = 'april_tag_{}'.format(31)
+        #     tag32_frame_id = 'april_tag_{}'.format(32)
+        #     self._broadcast_tf(
+        #         parent_frame_id=tag31_frame_id,
+        #         child_frame_id=tag32_frame_id,
+        #         translations=(0, 0.5, 0)
+        #     )
 
     def onShutdown(self):
         super(EncoderPoseNode, self).onShutdown()
