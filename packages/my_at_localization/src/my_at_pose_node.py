@@ -88,9 +88,6 @@ class ATPoseNode(DTROS):
 
         self.log("Initialized!")
 
-        self.tag_dict = dict()
-        self.first_tag_id = None
-
     def getCameraInfo(self, cam_msg):
         if (self.camera_info == None):
             self.camera_info = cam_msg
@@ -134,26 +131,16 @@ class ATPoseNode(DTROS):
 
         br.sendTransform(ts)
 
-    def _broadcast_detected_tag(self, image_msg, tag, use_map_frame: bool):
+    def _broadcast_detected_tag(self, image_msg, tag_id, tag):
         pose = np.identity(4)
         pose[0:3, 0:3] = tag.pose_R
 
         q_tag = quaternion_from_matrix(pose)
-        tag_id = fetch_tag_id(tag)
-
         tag_frame_id = 'april_tag_{}'.format(tag_id)
         tag_cam_frame_id = 'april_tag_cam_{}'.format(tag_id)
         camera_rgb_link_frame_id = 'at_{}_camera_rgb_link'.format(tag_id)
         camera_link_frame_id = 'at_{}_camera_link'.format(tag_id)
         base_link_frame_id = 'at_{}_base_link'.format(tag_id)
-        map_frame_id = 'map'
-
-        # Map to ATag
-        if use_map_frame:
-            self._broadcast_tf(
-                parent_frame_id=map_frame_id,
-                child_frame_id=tag_frame_id,
-                translations=(0, 0, 0.075))
 
         # ATag to ATag cam (this is because AprilTAG pose is different from physical)
         self._broadcast_tf(
@@ -213,20 +200,9 @@ class ATPoseNode(DTROS):
         camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
         detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
         detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
-
-        # self.tag_dict = dict()
         for tag_id, tag in zip(detected_tag_ids, detected_tags):
             print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
-            if not list(self.tag_dict.keys()):
-                self.first_tag_id = tag_id
-            self.tag_dict[tag_id] = tag
-
-        for tag_id, tag in self.tag_dict.items():
-            assert self.first_tag_id is not None
-            self._broadcast_detected_tag(image_msg, tag, tag_id == self.first_tag_id)
-
-    def onShutdown(self):
-        super(EncoderPoseNode, self).onShutdown()
+            self._broadcast_detected_tag(image_msg, tag_id, tag)
 
 
 if __name__ == "__main__":

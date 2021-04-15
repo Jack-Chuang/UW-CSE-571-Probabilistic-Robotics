@@ -14,7 +14,8 @@ def fetch_tag_id(tag):
     return __TAG_ID_DICT[tag.tag_id]
 
 
-transform_dict = {
+REFERENCE_ID = 31
+TRANSFORM_DICT = {
     (31, 32): ((0, 0.5, 0), (0, 0, 0)),
     (31, 65): ((0.5, 0.25, 0), (0, 0, 0))
 }
@@ -74,7 +75,7 @@ class StaticATTFPublisherNode(DTROS):
         # publish message every 1 second
         rate = rospy.Rate(1)  # 1Hz
         while not rospy.is_shutdown():
-            for cand_tag_ids, transform_params in transform_dict.items():
+            for cand_tag_ids, transform_params in TRANSFORM_DICT.items():
                 tag_frame_ids = list(map(lambda x: 'april_tag_{}'.format(x), cand_tag_ids))
                 self._broadcast_tf(
                     parent_frame_id=tag_frame_ids[0],
@@ -82,6 +83,13 @@ class StaticATTFPublisherNode(DTROS):
                     translations=transform_params[0],
                     euler_angles=transform_params[1]
                 )
+
+            map_frame_id = 'map'
+            tag_frame_id = 'april_tag_{}'.format(REFERENCE_ID)
+            self._broadcast_tf(
+                parent_frame_id=map_frame_id,
+                child_frame_id=tag_frame_id,
+                translations=(0, 0, 0.075))
             rate.sleep()
 
 
