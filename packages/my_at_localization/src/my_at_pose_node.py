@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from typing import Tuple, Optional, List
+
 import cv2
 import numpy as np
 import rospy
@@ -89,6 +91,43 @@ class ATPoseNode(DTROS):
             self.Rectify = Rectify(self.camera_info)
         return
 
+    def _broadcast_tf(
+            self,
+            parent_frame_id: str,
+            child_frame_id: str,
+            stamp: Optional[float] = None,
+            translations: Optional[Tuple[float, float, float]] = None,
+            euler_angles: Optional[Tuple[float, float, float]] = None,
+            quarternion: Optional[List[float]] = None):
+        br = tf2_ros.StaticTransformBroadcaster()
+        ts = TransformStamped()
+
+        ts.header.frame_id = parent_frame_id
+        ts.child_frame_id = child_frame_id
+
+        if stamp is None:
+            stamp = rospy.Time.now()
+        ts.header.stamp = stamp
+
+        if translations is None:
+            translations = 0, 0, 0
+        ts.transform.translation.x = translations[0]
+        ts.transform.translation.y = translations[1]
+        ts.transform.translation.z = translations[2]
+
+        if euler_angles is not None:
+            q = tf_conversions.transformations.quaternion_from_euler(*euler_angles)
+        elif quarternion is not None:
+            q = quarternion
+        else:
+            q = 0, 0, 0, 1
+        ts.transform.rotation.x = q[0]
+        ts.transform.rotation.y = q[1]
+        ts.transform.rotation.z = q[2]
+        ts.transform.rotation.w = q[3]
+
+        br.sendTransform(ts)
+
     def _broadcast_detected_tag(self, image_msg, tag):
         print("Detected: Tag ID ", tag.tag_id)
 
@@ -97,93 +136,51 @@ class ATPoseNode(DTROS):
 
         q_tag = quaternion_from_matrix(pose)
 
+        tag_frame_id = 'april_tag_{}'.format(tag.tag_id)
+        tag_cam_frame_id = 'april_tag_cam_{}'.format(tag.tag_id)
+        camera_rgb_link_frame_id = 'camera_rgb_link'
+        camera_link_frame_id = 'camera_link'
+        base_link_frame_id = 'at_base_link'
+        map_frame_id = 'map'
+
         # Map to ATag
-        br0 = tf2_ros.StaticTransformBroadcaster()
-        t0 = TransformStamped()
-
-        t0.header.stamp = rospy.Time.now()
-        t0.header.frame_id = "map"
-        t0.child_frame_id = f'april_tag_{tag.tag_id}'
-        t0.transform.translation.x = 0
-        t0.transform.translation.y = 0
-        t0.transform.translation.z = 0.075
-        t0.transform.rotation.x = 0
-        t0.transform.rotation.y = 0
-        t0.transform.rotation.z = 0
-        t0.transform.rotation.w = 1
-
-        br0.sendTransform(t0)
+        self._broadcast_tf(
+            parent_frame_id=map_frame_id,
+            child_frame_id=tag_frame_id,
+            translations=(0, 0, 0.075))
 
         # ATag to ATag cam (this is because AprilTAG pose is different from physical)
-        br1 = tf2_ros.StaticTransformBroadcaster()
-        t1 = TransformStamped()
-
-        t1.header.stamp = rospy.Time.now()
-        t1.header.frame_id = f'april_tag_{tag.tag_id}'
-        t1.child_frame_id = f'april_tag_cam_{tag.tag_id}'
-        t1.transform.translation.x = 0
-        t1.transform.translation.y = 0
-        t1.transform.translation.z = 0
-        quat1 = tf_conversions.transformations.quaternion_from_euler(-90 * math.pi / 180, 0, 90 * math.pi / 180)
-        t1.transform.rotation.x = quat1[0]
-        t1.transform.rotation.y = quat1[1]
-        t1.transform.rotation.z = quat1[2]
-        t1.transform.rotation.w = quat1[3]
-
-        br1.sendTransform(t1)
+        self._broadcast_tf(
+            parent_frame_id=tag_frame_id,
+            child_frame_id=tag_cam_frame_id,
+            euler_angles=(-90 * math.pi / 180, 0, 90 * math.pi / 180)
+        )
 
         # ATag cam to camera_rgb_link (again this is internal cam frame)
-        br2 = tf2_ros.TransformBroadcaster()
-        t2 = TransformStamped()
-
-        t2.header.stamp = image_msg.header.stamp
-        t2.header.frame_id = f'april_tag_cam_{tag.tag_id}'
-        t2.child_frame_id = "camera_rgb_link"
-        t2.transform.translation.x = tag.pose_t[0]
-        t2.transform.translation.y = tag.pose_t[1]
-        t2.transform.translation.z = tag.pose_t[2]
-        t2.transform.rotation.x = q_tag[0]
-        t2.transform.rotation.y = q_tag[1]
-        t2.transform.rotation.z = q_tag[2]
-        t2.transform.rotation.w = q_tag[3]
-
-        br2.sendTransform(t2)
+        self._broadcast_tf(
+            parent_frame_id=tag_cam_frame_id,
+            child_frame_id=camera_rgb_link_frame_id,
+            stamp=image_msg.header.stamp,
+            translations=tag.pose_t,
+            quarternion=q_tag
+        )
 
         # camera_rgb_link to camera_link (internal cam frame to physical cam frame)
-        br3 = tf2_ros.StaticTransformBroadcaster()
-        t3 = TransformStamped()
-
-        t3.header.stamp = image_msg.header.stamp
-        t3.header.frame_id = "camera_rgb_link"
-        t3.child_frame_id = "camera_link"
-        t3.transform.translation.x = 0
-        t3.transform.translation.y = 0
-        t3.transform.translation.z = 0
-        quat3 = tf_conversions.transformations.quaternion_from_euler(0, 90 * math.pi / 180, -90 * math.pi / 180)
-        t3.transform.rotation.x = quat3[0]
-        t3.transform.rotation.y = quat3[1]
-        t3.transform.rotation.z = quat3[2]
-        t3.transform.rotation.w = quat3[3]
-
-        br3.sendTransform(t3)
+        self._broadcast_tf(
+            parent_frame_id=camera_rgb_link_frame_id,
+            child_frame_id=camera_link_frame_id,
+            stamp=image_msg.header.stamp,
+            euler_angles=(0, 90 * math.pi / 180, -90 * math.pi / 180)
+        )
 
         # camera_link to base_link of robot
-        br4 = tf2_ros.StaticTransformBroadcaster()
-        t4 = TransformStamped()
-
-        t4.header.stamp = image_msg.header.stamp
-        t4.header.frame_id = "camera_link"
-        t4.child_frame_id = "at_base_link"
-        t4.transform.translation.x = -0.066
-        t4.transform.translation.y = 0
-        t4.transform.translation.z = -0.106
-        quat4 = tf_conversions.transformations.quaternion_from_euler(0, -15 * math.pi / 180, 0)
-        t4.transform.rotation.x = quat4[0]
-        t4.transform.rotation.y = quat4[1]
-        t4.transform.rotation.z = quat4[2]
-        t4.transform.rotation.w = quat4[3]
-
-        br4.sendTransform(t4)
+        self._broadcast_tf(
+            parent_frame_id=camera_link_frame_id,
+            child_frame_id=base_link_frame_id,
+            stamp=image_msg.header.stamp,
+            translations=(-0.066, 0, -0.106),
+            euler_angles=(0, -15 * math.pi / 180, 0)
+        )
 
     def detectATPose(self, image_msg):
         """
@@ -209,12 +206,23 @@ class ATPoseNode(DTROS):
 
         camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
         tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
+        tag_ids = list(map(lambda x: x.tag_id, tags))
 
         if len(tags) > 0:
             for tag in tags:
                 self._broadcast_detected_tag(image_msg, tag)
         else:
             print("Detected: Tag ID - None")
+
+        ref_tag_ids = {32, 33}
+        if all(tag in tag_ids for tag in ref_tag_ids):
+            tag32_frame_id = 'april_tag_{}'.format(32)
+            tag33_frame_id = 'april_tag_{}'.format(33)
+            self._broadcast_tf(
+                parent_frame_id=tag33_frame_id,
+                child_frame_id=tag32_frame_id,
+                translations=(0, 0.5, 0)
+            )
 
     def onShutdown(self):
         super(EncoderPoseNode, self).onShutdown()
