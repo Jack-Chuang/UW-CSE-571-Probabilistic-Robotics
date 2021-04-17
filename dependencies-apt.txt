@@ -1,3 +1,4 @@
 # LIST YOUR APT PACKAGES HERE
 ros-noetic-image-geometry
 ros-noetic-map-server
+ros-noetic-hector-trajectory-server
