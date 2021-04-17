@@ -21,6 +21,7 @@ dt-launchfile-init
 # dt-exec roslaunch my_package multiple_nodes.launch veh:=$VEHICLE_NAME
 # dt-exec roslaunch my_encoder_localization my_encoder_pose_node.launch veh:=$VEHICLE_NAME
 dt-exec roslaunch my_at_localization my_at_pose_node.launch veh:=$VEHICLE_NAME
+dt-exec roslaunch my_viz viz_node.launch veh:=$VEHICLE_NAME
 
 
 # ----------------------------------------------------------------------------
