@@ -4,11 +4,9 @@ from typing import Tuple, Optional, List
 import cv2
 import numpy as np
 import rospy
-# import odometry_activity
 import tf2_ros
 import tf_conversions
 from cv_bridge import CvBridge
-# from image_processing import DecoderNode
 from dt_apriltags import Detector
 from duckietown.dtros import DTROS, NodeType, TopicType
 from geometry_msgs.msg import TransformStamped
@@ -18,6 +16,13 @@ from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import CompressedImage
 from sensor_msgs.msg import Image
 from tf.transformations import *
+
+
+__TAG_ID_DICT = {32: 32, 33: 31, 65: 61, 31: 33, 57: 57, 61: 65, 10: 11, 11: 10, 9: 9, 24: 26, 25: 25, 26: 24}
+
+
+def fetch_tag_id(tag):
+    return __TAG_ID_DICT[tag.tag_id]
 
 
 class ATPoseNode(DTROS):
@@ -83,12 +88,6 @@ class ATPoseNode(DTROS):
 
         self.log("Initialized!")
 
-        self.tag_dict = dict()
-        self._correct_tag_ids = {32: 32, 33: 31, 65: 61, 31: 33, 57: 57, 61: 65, 10: 11, 11: 10, 9: 9, 24: 26, 25: 25, 26: 24}
-
-    def fetch_tag_id(self, tag):
-        return self._correct_tag_ids[tag.tag_id]
-
     def getCameraInfo(self, cam_msg):
         if (self.camera_info == None):
             self.camera_info = cam_msg
@@ -132,25 +131,16 @@ class ATPoseNode(DTROS):
 
         br.sendTransform(ts)
 
-    def _broadcast_detected_tag(self, image_msg, tag):
+    def _broadcast_detected_tag(self, image_msg, tag_id, tag):
         pose = np.identity(4)
         pose[0:3, 0:3] = tag.pose_R
 
         q_tag = quaternion_from_matrix(pose)
-        tag_id = self.fetch_tag_id(tag)
-
         tag_frame_id = 'april_tag_{}'.format(tag_id)
         tag_cam_frame_id = 'april_tag_cam_{}'.format(tag_id)
-        camera_rgb_link_frame_id = 'camera_rgb_link'
-        camera_link_frame_id = 'camera_link'
-        base_link_frame_id = 'at_base_link'
-        map_frame_id = 'map'
-
-        # Map to ATag
-        self._broadcast_tf(
-            parent_frame_id=map_frame_id,
-            child_frame_id=tag_frame_id,
-            translations=(0, 0, 0.075))
+        camera_rgb_link_frame_id = 'at_{}_camera_rgb_link'.format(tag_id)
+        camera_link_frame_id = 'at_{}_camera_link'.format(tag_id)
+        base_link_frame_id = 'at_{}_base_link'.format(tag_id)
 
         # ATag to ATag cam (this is because AprilTAG pose is different from physical)
         self._broadcast_tf(
@@ -209,41 +199,10 @@ class ATPoseNode(DTROS):
 
         camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
         detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
-        detected_tag_ids = list(map(lambda x: self.fetch_tag_id(x), detected_tags))
-
+        detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
         for tag_id, tag in zip(detected_tag_ids, detected_tags):
-            print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp, rospy.Time.now()))
-            self.tag_dict[tag_id] = tag
-
-        for tag_id, tag in self.tag_dict.items():
-            self._broadcast_detected_tag(image_msg, tag)
-
-        transform_dict = {
-            (31, 32): ((0, 0.5, 0), (0, 0, 0)),
-            (31, 65): ((0.5, 0.25, 0), (0, 0, 0))
-        }
-
-        for cand_tag_ids, transform_params in transform_dict.items():
-            tag_frame_ids = list(map(lambda x: 'april_tag_{}'.format(x), cand_tag_ids))
-            self._broadcast_tf(
-                parent_frame_id=tag_frame_ids[0],
-                child_frame_id=tag_frame_ids[1],
-                translations=transform_params[0],
-                euler_angles=transform_params[1]
-            )
-
-        # ref_tag_ids = {31, 32}
-        # if all(tag in self.tag_dict.keys() for tag in ref_tag_ids):
-        #     tag31_frame_id = 'april_tag_{}'.format(31)
-        #     tag32_frame_id = 'april_tag_{}'.format(32)
-        #     self._broadcast_tf(
-        #         parent_frame_id=tag31_frame_id,
-        #         child_frame_id=tag32_frame_id,
-        #         translations=(0, 0.5, 0)
-        #     )
-
-    def onShutdown(self):
-        super(EncoderPoseNode, self).onShutdown()
+            print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
+            self._broadcast_detected_tag(image_msg, tag_id, tag)
 
 
 if __name__ == "__main__":
