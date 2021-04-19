@@ -15,7 +15,7 @@ The source code for each of these packages are inside their respective `src/` fo
 ### [DO NOT HAVE TO DO] To understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
 
 
-# [TASK 1] Build the provided packages, run it on the robot, record what you can visualize.
+## [TASK 1] Build the provided packages, run it on the robot, record what you can visualize.
 After completing project 0.5. You must be able to communicate with your robot from your local computer using `dts shell`
 
 ### Clone the cse571-sp21-project-1 repository on to your local computer
@@ -41,13 +41,13 @@ By default, the above command will launch the package(s) indicated in the `./lau
 
 NOTE: Be sure to follow these [instructions](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html) in order to build. You cannot build this on your desktop using the typical `docker build` workflow. 
 
-# [TASK 2] Create a physical map-1 using duckietown supplies
+## [TASK 2] Create a physical map-1 using duckietown supplies
 
-# [TASK 3] Implement `my_kf_localization` package and test on map-1.
+## [TASK 3] Implement `my_kf_localization` package and test on map-1.
 
-# [TASK 4] Create a physical map-2 using duckietown supplies
+## [TASK 4] Create a physical map-2 using duckietown supplies
 
-# [TASK 5] Test `my_kf_localization` package on map-2.
+## [TASK 5] Test `my_kf_localization` package on map-2.
 
 
 # Additional Documentation from Template:
