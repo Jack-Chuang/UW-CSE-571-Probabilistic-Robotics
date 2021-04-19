@@ -1,6 +1,15 @@
-# Documentation for my-duckie repo
-my-duckie repo contains two packages `my_encoder_localization` and `my_at_localization`. You can see them in the `./packages/` path.
-The source code for these packages are inside their respective `src/` folders. For example for `my_encoder_localization` you will see the source code in the path `./packages/my_encoder_localization/src/`.
+# cse571-sp21-project-1 repo content
+cse571-sp21-project-1 repo contains four packages that you won't have to modify:
+- `my_at_localization` that localizes the AprilTAGs seen by the robot
+- `my_static_tf` that publishes coordinate transforms (position and orientation) of all the landmarks in predetermined maps. These coordinate frames are in the form of ROS `\tf` messages
+- `my_viz` that can publish map information and path traced by the robot in a visualizer (ROS visualizer called RViz).
+- `image_processing` that contains utility functions to process images.
+
+cse571-sp21-project-1 repo contains TODO packages that you will have to edit in order to complete the project:
+- `my_kf_localization` that localizes the robot based on the velocity control and AprilTAG localization.
+- 
+You can see them in the `./packages/` path.
+The source code for each of these packages are inside their respective `src/` folders. For example for `my_at_localization` you will see the source code in the path `./packages/my_at_localization/src/`.
 
 ### Run the build command below to build the `my_encoder_localization` and `my_at_localization` packages on the duckiebot.
 `dts dts devel build -f -H {ROBOT_NAME}.local` from the `\my-duckie` folder.
