@@ -87,10 +87,11 @@ Notice that all of these transforms is specific to a AprilTAG. This is the measu
 
 ## TASK-3 Implement `sensor_fusion_localization` package and test on map-1.
 
-After you understand the TF-tree, you can start thinking about the Extended Kalman Filter. Your task is going to involve modifying the (very rough) skeleton code we provide [here](./packages/sensor_fusion_localization/src/sensor_fusion_node.py). We have provided a motion model for you, but you will need to consider how to linearize it, how to set the covariance matrix, and how to handle the sensor measurements. The sensor measurements should come in the form of the readings from the AprilTags. Note that the AprilTags provide a 6-DOF pose while we are only attempting to do 3Dof (x, y, theta) localization. Once you have implemented the kalman filter, you should figure out how to visualize the poses. Currently poses are published from the skeleton as Pose2DStamped messages. These are not suported by Rviz. You will need to either need to plot your robot's trajectory using alternative tools or change the message type to use one supported by Rviz.
+After you understand the TF-tree, you can start thinking about our two filtering methods: the Extended Kalman Filter and the Particle Filter. Your task is going to involve modifying the (very rough) skeleton code we provide [here](./packages/sensor_fusion_localization/src/sensor_fusion_node.py) and demonstrating results with the two methods.
 
-Test your localization on your map-1. Record a video of the robot navigating and create a simultaneous visualization of the pose estimates. You should lay these out side-by-side in a video editor of your choice and submit it as part of your report.
+We have provided a motion model for you, but you will need to consider how to set the covariance matrix, how to handle the sensor measurements, and, for the Kalmand Filter, how to linearize it. The sensor measurements should come in the form of the readings from the AprilTags. Note that the AprilTags provide a 6-DOF pose while we are only attempting to do 3Dof (x, y, theta) localization. Once you have implemented the kalman filter, you should figure out how to visualize the poses. Currently poses are published from the skeleton as Pose2DStamped messages. These are not suported by Rviz. You will need to either need to plot your robot's trajectory using alternative tools or change the message type to use one supported by Rviz.
 
+Test both of your localization methods on map-1. For each method, record a video of the robot navigating and create a simultaneous visualization of the pose estimates. You should lay these out side-by-side in a video editor of your choice and submit it as part of your report.
 
 
 ## TASK-4 Create a physical map-2 using duckietown supplies
@@ -110,7 +111,7 @@ Test your localization on your map-1. Record a video of the robot navigating and
 
 ## TASK-5 Test `sensor_fusion_localization` package on map-2.
 
-Similar to Task 4, test your sensor fusion on the new map, record videos of your results.
+Similar to Task 4, test your sensor fusion methods on the new map and record videos of your results. These videos should be submitted as part of your report.
 
 ## TASK-6 Write up a report
 
