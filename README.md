@@ -1,3 +1,5 @@
+This project is about implementing robot localization methods such as Extended Kalman Filter (EKF) and Particle Filter (PF). Given a map, your localization method will take sensor measurements of landmarks observed by the robot, and control updates from teleoperation of the robot, to localize the robot in the map.
+
 # Overview of cse571-sp21-project-1 repository
 
 ### cse571-sp21-project-1 repo contains four packages that you won't have to modify:
