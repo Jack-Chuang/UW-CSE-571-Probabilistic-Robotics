@@ -4,6 +4,7 @@ import numpy as np
 import rospy
 
 from duckietown_msgs.msg import Twist2DStamped, Pose2DStamped
+from std_msgs.msg import Int32MultiArray
 
 from duckietown.dtros import DTROS, NodeType, TopicType
 
@@ -13,11 +14,20 @@ class SensorFusionNode(DTROS):
     Much of this code block is lifted from the official Duckietown Github:
     https://github.com/duckietown/dt-car-interface/blob/daffy/packages/dagu_car/src/velocity_to_pose_node.py
 
-    The goal of this class is to use an Extended Kalman Filter to fuse estimates from a motion model with sensor readings from the cameras.
-    We have left some code here from the official Duckietown repo, but you should feel free to discard it if you so choose. it or not
+    The goal of this node is to provide a state estimate using one of the two filtering methods we have covered in class: the Extended Kalman Filter
+    and the Particle Filter. You will be fusing the estimates from a motion model with sensor readings from the cameras.
+    We have left some code here from the official Duckietown repo, but you should feel free to discard it
+    if you so choose to use a different approach.
 
-    The motion model callback as listed here will provide you with motion estimates, but you will
-    need to linearize them in order to use the EKF. You will also need to figure out how to fuse in the data from the cameras.
+    The motion model callback as listed here will provide you with motion estimates, but you will need to figure out the covariance matrix yourself.
+    Additionally, for the PF, you will need to figure out how to sample (based on the covariance matrix),
+    and for the EKF, you will need to figure out how to Linearize. Our expectation is that this is a group project, so we are not providing
+    skeleton code for these parts.
+
+    Likewise, you will need to implement your own sensor model and figure out how to manage the sensor readings. We have implemented a subscriber below
+    that will fire the `sensor_fusion_callback` whenever a new sensor reading comes in. You will need to figure out how to unpack the sensor reading and
+    what to do with them. To do this, you might use the [tf](https://docs.ros.org/en/melodic/api/tf/html/python/tf_python.html) package to get the transformation from the tf tree
+    at the appropriate time. Just like in the motion model, you will need to consider the covariance matrix for the sensor model.
 
     Args:
         node_name (:obj:`str`): a unique, descriptive name for the node that ROS will use
@@ -44,6 +54,12 @@ class SensorFusionNode(DTROS):
         self.last_theta_dot = 0
         self.last_v = 0
 
+        # TODO Feel free to use a flag like this to set which type of filter you're currently using.
+        # You can also define these as parameters in the launch file for this node if you're feeling fancy
+        # (or if this was a system you wanted to use in the real world), but a hardcoded flag works just as well
+        # for a class project like this.
+        self.FUSION_TYPE = "EKF"
+
         # Setup the publisher
         self.pub_pose = rospy.Publisher(
             "~pose",
@@ -60,14 +76,34 @@ class SensorFusionNode(DTROS):
             queue_size=1
         )
 
+        # Setup the subscriber for when sensor readings come in
+        self.sub_sensor = rospy.Subscriber(
+            f"/{self.veh_name}/detected_tags",
+            Int32MultiArray,
+            self.sensor_fusion_callback,
+            queue_size=1
+        )
+
+
         # ---
         self.log("Initialized.")
+
+    def sensor_fusion_callback(self, msg_sensor):
+        """
+        This function should handle the sensor fusion. It will fire whenever
+        the robot observes an AprilTag
+        """
+        pass
 
     def motion_model_callback(self, msg_velocity):
         """
 
         This function will use robot velocity information to give a new state
         Performs the calclulation from velocity to pose and publishes a messsage with the result.
+
+
+        Feel free to modify this however you wish. It's left more-or-less as-is
+        from the official duckietown repo
 
         Args:
             msg_velocity (:obj:`Twist2DStamped`): the current velocity message

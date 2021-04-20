@@ -9,6 +9,7 @@ project(sensor_fusion_localization)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   duckietown_msgs
+  std_msgs
   rospy
 )
 
