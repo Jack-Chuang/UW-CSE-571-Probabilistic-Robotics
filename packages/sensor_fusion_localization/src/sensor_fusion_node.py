@@ -4,6 +4,7 @@ import numpy as np
 import rospy
 
 from duckietown_msgs.msg import Twist2DStamped, Pose2DStamped
+from std_msgs.msg import Int32MultiArray
 
 from duckietown.dtros import DTROS, NodeType, TopicType
 
@@ -23,9 +24,9 @@ class SensorFusionNode(DTROS):
     and for the EKF, you will need to figure out how to Linearize. Our expectation is that this is a group project, so we are not providing
     skeleton code for these parts.
 
-    Likewise, you will need to implement your own sensor model and figure out how to listen for sensor readings. To do this, you might consider
-    investigating the rospy Publisher/Subscriber paradigm (see below for an example) to run a callback when a sensor reading comes in
-    and you might use the [tf](https://docs.ros.org/en/melodic/api/tf/html/python/tf_python.html) package to get the transformation from the tf tree
+    Likewise, you will need to implement your own sensor model and figure out how to manage the sensor readings. We have implemented a subscriber below
+    that will fire the `sensor_fusion_callback` whenever a new sensor reading comes in. You will need to figure out how to unpack the sensor reading and
+    what to do with them. To do this, you might use the [tf](https://docs.ros.org/en/melodic/api/tf/html/python/tf_python.html) package to get the transformation from the tf tree
     at the appropriate time. Just like in the motion model, you will need to consider the covariance matrix for the sensor model.
 
     Args:
@@ -75,14 +76,34 @@ class SensorFusionNode(DTROS):
             queue_size=1
         )
 
+        # Setup the subscriber for when sensor readings come in
+        self.sub_sensor = rospy.Subscriber(
+            f"/{self.veh_name}/detected_tags",
+            Int32MultiArray,
+            self.sensor_fusion_callback,
+            queue_size=1
+        )
+
+
         # ---
         self.log("Initialized.")
+
+    def sensor_fusion_callback(self, msg_sensor):
+        """
+        This function should handle the sensor fusion. It will fire whenever
+        the robot observes an AprilTag
+        """
+        pass
 
     def motion_model_callback(self, msg_velocity):
         """
 
         This function will use robot velocity information to give a new state
         Performs the calclulation from velocity to pose and publishes a messsage with the result.
+
+
+        Feel free to modify this however you wish. It's left more-or-less as-is
+        from the official duckietown repo
 
         Args:
             msg_velocity (:obj:`Twist2DStamped`): the current velocity message
