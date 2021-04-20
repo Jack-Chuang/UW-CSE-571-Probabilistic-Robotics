@@ -59,8 +59,10 @@ It is important to understand the TF tree.
 
 Notice that all of these transforms is specific to a AprilTAG. This is the measurement we provide you when a robot detects an AprilTAG. At the end of the Task 1, you should be able to visualize these transforms in RViz. Move the robot around and see how these transforms change. You can also change the visualization's global frame from \map to any other frame using the "Global options" -> "Fixed frame" in RViz.
 
-## [TASK 3] Implement `my_kf_localization` package and test on map-1.
-[TODO] Adam
+## [TASK 3] Implement `sensor_fusion_localization` package and test on map-1.
+After you understand the TF-tree, you can start thinking about the Extended Kalman Filter. Your task is going to involve modifying the (very rough) skeleton code we provide [here](./packages/sensor_fusion_localization/src/sensor_fusion_node.py). We have provided a motion model for you, but you will need to consider how to linearize it, how to set the covariance matrix, and how to handle the sensor measurements. The sensor measurements should come in the form of the readings from the AprilTags. Note that the AprilTags provide a 6-DOF pose while we are only attempting to do 3Dof (x, y, theta) localization. Once you have implemented the kalman filter, you should figure out how to visualize the poses. Currently poses are published from the skeleton as Pose2DStamped messages. These are not suported by Rviz. You will need to either need to plot your robot's trajectory using alternative tools or change the message type to use one supported by Rviz.
+
+Test your localization on your map-1. Record a video of the robot navigating and create a simultaneous visualization of the pose estimates. You should lay these out side-by-side in a video editor of your choice and submit it as part of your report.
 
 ## [TASK 4] Create a physical map-2 using duckietown supplies
 
@@ -71,8 +73,11 @@ Notice that all of these transforms is specific to a AprilTAG. This is the measu
 
 [TODO] Junha to give the map and Karthik to run and test and document here.
 
-## [TASK 5] Test `my_kf_localization` package on map-2.
-[TODO] Adam
+## [TASK 5] Test `sensor_fusion_localization` package on map-2.
+Similar to Task 4, test your sensor fusion on the new map, record videos of your results, and submit the report.
+
+## [TASK 6] Write up a report
+For the submission of this project, you should submit a 3-4 page report. The report should explain the EKF algorithm, your implementation, your results, and what you could do to improve on the results, both in terms of setup (i.e. how might you create a more stable environment for localization) and in terms of methodology (what other methods would you use to do a better job and why). As part of your report, you should also submit videos of your robot alongside the estimated path. 
 
 # Additional Documentation from Template:
 ### 1. Define dependencies
