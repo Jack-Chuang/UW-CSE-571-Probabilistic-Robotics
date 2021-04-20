@@ -115,7 +115,7 @@ Similar to Task 4, test your sensor fusion methods on the new map and record vid
 
 ## TASK-6 Write up a report
 
-For the submission of this project, you should submit a 3-4 page report. The report should explain the EKF and particle filter algorithm, your implementations, your results, and what you could do to improve on the results, both in terms of setup (i.e. how might you create a more stable environment for localization) and in terms of methodology (what other methods would you use to do a better job and why). As part of your report, you should also submit videos of your robot alongside the estimated path. 
+For the submission of this project, you should submit a 3-4 page report. The report should explain the Extended Kalman Filter and Particle Filter algorithms, your implementations, your results, and what you could do to improve on the results, both in terms of setup (i.e. how might you create a more stable environment for localization) and in terms of methodology (what other methods would you use to do a better job and why). As part of your report, you should also submit videos of your robot alongside the estimated path. 
 
 
 # Additional Documentation from Template:
