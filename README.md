@@ -16,9 +16,9 @@ The source code for each of these packages are inside their respective `src/` fo
 
 # Recommended Exercises:
 
-### Understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
+- Understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
 
-### Understand ROS topics, subscriber, publisher, tf message, broadcaster, Markers for drawing in Rviz. Please see the [documentation](http://wiki.ros.org/ROS/Tutorials)
+- Understand ROS topics, subscriber, publisher, tf message, broadcaster, Markers for drawing in Rviz. Please see the [documentation](http://wiki.ros.org/ROS/Tutorials)
 
 
 # Outline of tasks in this project:
