@@ -95,7 +95,7 @@ class StaticATTFPublisherNode(DTROS):
 
 if __name__ == '__main__':
     # create the node
-    node = StaticATTFPublisherNode(node_name='static_at_tf_publisher')
+    node = StaticATTFPublisherNode(node_name='static_at_tf_publisher_map1')
     # run node
     node.run()
     # keep spinning
