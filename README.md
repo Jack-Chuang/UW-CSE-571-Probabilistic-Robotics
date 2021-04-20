@@ -57,7 +57,7 @@ It is important to understand the TF tree.
 - Another transform links the internal camera to its physical location via `at_{id}_camera_rgb_link` to `at_{id}_camera_link`. 
 - Using the design of the robot, we can get the transform between `at_{id}_camera_link` to the base of the robot `at_{id}_base_link`. 
 
-Notice that all of these transforms is specific to a AprilTAG. This is the measurement we provide you when a robot detects an AprilTAG.
+Notice that all of these transforms is specific to a AprilTAG. This is the measurement we provide you when a robot detects an AprilTAG. At the end of the Task 1, you should be able to visualize these transforms in RViz. Move the robot around and see how these transforms change. You can also change the visualization's global frame from \map to any other frame using the "Global options" -> "Fixed frame" in RViz.
 
 ## [TASK 3] Implement `my_kf_localization` package and test on map-1.
 [TODO] Adam
