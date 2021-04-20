@@ -72,6 +72,9 @@ Test your localization on your map-1. Record a video of the robot navigating and
 ### 2. Change the static publisher and map file to see the map in RViz with landmarks.
 - By default, the `/launchers/default.sh` executes the `viz_node.launch` (for the map-1). Change this to `viz_node_2.launch` to visualize map-2 in RViz.
 - By default, the `/launchers/default.sh` executes the `static_at_tf_publisher.launch`. Change this to `static_at_tf_publisher_2.launch` to visualize landmarks (AprilTAGs frames).
+- Now build and run the project. You will be able to see the map and the static transforms in RViz as below.
+
+![Map2_Rviz](./images/map2_rviz.png)
 
 ## [TASK 5] Test `sensor_fusion_localization` package on map-2.
 Similar to Task 4, test your sensor fusion on the new map, record videos of your results, and submit the report.
