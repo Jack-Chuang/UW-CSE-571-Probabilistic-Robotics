@@ -83,7 +83,7 @@ It is important to understand the TF tree.
 
 Notice that all of these transforms is specific to a AprilTAG. This is the measurement we provide you when a robot detects an AprilTAG. At the end of the Task 1, you should be able to visualize these transforms in RViz. Move the robot around and see how these transforms change. You can also change the visualization's global frame from \map to any other frame using the "Global options" -> "Fixed frame" in RViz.
 
-
+### 4. Record what you can visualize in RViz and an image of the physical map created.
 
 ## TASK-3 Implement `sensor_fusion_localization` package and test on map-1.
 
@@ -106,15 +106,15 @@ Test your localization on your map-1. Record a video of the robot navigating and
 
 ![Map2_Rviz](./images/map2_rviz.png)
 
+### 3. Record what you can visualize in RViz and an image of the physical map created.
+
 ## TASK-5 Test `sensor_fusion_localization` package on map-2.
 
-Similar to Task 4, test your sensor fusion on the new map, record videos of your results, and submit the report.
+Similar to Task 4, test your sensor fusion on the new map, record videos of your results.
 
 ## TASK-6 Write up a report
 
 For the submission of this project, you should submit a 3-4 page report. The report should explain the EKF algorithm, your implementation, your results, and what you could do to improve on the results, both in terms of setup (i.e. how might you create a more stable environment for localization) and in terms of methodology (what other methods would you use to do a better job and why). As part of your report, you should also submit videos of your robot alongside the estimated path. 
-
-
 
 
 # Additional Documentation from Template:
