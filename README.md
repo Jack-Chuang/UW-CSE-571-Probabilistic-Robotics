@@ -140,7 +140,7 @@ For the submission of this project, you should submit a 3-4 page report.
 Here is a list of items that should be included in the report.
 
 **Note: Videos should be uploaded to youtube in the *unlisted* mode and links should be provided in the report.**
-1. Group members information: Full Name, Email ID.
+1. Group members information: Group name, full individual names, and email.
 1. **[20 points]** A video of what you can visualize using RViz or other tools 
    when you build the provided packages on your robot.
 1. **[10 points]** A video of RViz or equivalent visualization and (an) image(s) of the physical map for `map-1`.
