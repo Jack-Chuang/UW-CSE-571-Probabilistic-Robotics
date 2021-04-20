@@ -19,10 +19,10 @@ The source code for each of these packages are inside their respective `src/` fo
 # Outline of tasks in this project:
 
 - TASK-1 Build the provided packages, run it on the robot, record what you can visualize.
-- TASK-2 Create a physical map-1 using duckietown supplies.
-- TASK-3 Implement `sensor_fusion_localization` package and test on map-1.
-- TASK-4 Create a physical map-2 using duckietown supplies.
-- TASK-5 Test `sensor_fusion_localization` package on map-2.
+- TASK-2 Create a physical `map-1` using duckietown supplies.
+- TASK-3 Implement `sensor_fusion_localization` package and test on `map-1`.
+- TASK-4 Create a physical `map-2` using duckietown supplies.
+- TASK-5 Test `sensor_fusion_localization` package on `map-2`.
 - TASK-6 Write up a report.
 
 
@@ -48,8 +48,12 @@ cd cse571-sp21-project-1`
 ### 4. Visualize what is happening by logging into the robot with the below command.
 
 `dts start_gui_tools --vnc ROBOT_NAME` and open `http://localhost:8087/`
-Open the Rviz, add `\tf` from the panel.
+Open the Rviz, add `\tf` from the panel like the figure below.
+![add_tf](./images/add_tf.png)
+*Adding TF to Displays.*
+
 ![VNC](./images/novnc.png)
+*Example of visualization after adding TF to Displays.*
 [Here is the video of what it will look like](https://drive.google.com/file/d/1f476TsCCE0Qec0i8Z3L4r3IU_1kj-CZV/view?usp=sharing)
 
 ### 5. Record a screen recording of what you can visualize using Rviz and other tools (similar to above).
@@ -61,7 +65,7 @@ Be sure to follow these [instructions](https://docs.duckietown.org/daffy/duckiet
 
 
 
-## TASK-2 Create a physical map-1 using duckietown supplies
+## TASK-2 Create a physical `map-1` using duckietown supplies
 
 ### 1. Create a map in your environment that looks and measures like below. Note that consistent height of the tag center to the base of the stand will avoid noise in the estimation.
 
@@ -69,7 +73,7 @@ Be sure to follow these [instructions](https://docs.duckietown.org/daffy/duckiet
 
 ### 2. Understanding the coordinate frames in the map (both physical as well as what is visualized in the RViz).
 
-In RViz, coordinate frames are colored with x-axis in red, y-axis in green and z-axis in blue. For map-1, AprilTAG-31 (AT-31) is the global origin frame. map-1 has two other tags (AT-32 and AT-65) with fixed transformation with respect to the map frame. `my_static_tf` package runs by default from the `./launchers/default.sh` to publish `\tf` tree that you can see in RViz. So overall, you can select 4 transforms (`map`, `april_tag_31`, `april_tag_32`, `april_tag_65`) in RViz to see the map. 
+In RViz, coordinate frames are colored with x-axis in red, y-axis in green and z-axis in blue. For `map-1`, AprilTAG-31 (AT-31) is the global origin frame. map-1 has two other tags (AT-32 and AT-65) with fixed transformation with respect to the map frame. `my_static_tf` package runs by default from the `./launchers/default.sh` to publish `\tf` tree that you can see in RViz. So overall, you can select 4 transforms (`map`, `april_tag_31`, `april_tag_32`, `april_tag_65`) in RViz to see the map. 
 
 ![Map1_Rviz](./images/map1_rviz.png)
 
@@ -85,37 +89,52 @@ Notice that all of these transforms is specific to a AprilTAG. This is the measu
 
 ### 4. Record what you can visualize in RViz and an image of the physical map created.
 
-## TASK-3 Implement `sensor_fusion_localization` package and test on map-1.
+## TASK-3 Implement `sensor_fusion_localization` package and test on `map-1`.
 
 After you understand the TF-tree, you can start thinking about our two filtering methods: the Extended Kalman Filter and the Particle Filter. Your task is going to involve modifying the (very rough) skeleton code we provide [here](./packages/sensor_fusion_localization/src/sensor_fusion_node.py) and demonstrating results with the two methods.
 
 We have provided a motion model for you, but you will need to consider how to set the covariance matrix, how to handle the sensor measurements, and, for the Kalmand Filter, how to linearize it. The sensor measurements should come in the form of the readings from the AprilTags. Note that the AprilTags provide a 6-DOF pose while we are only attempting to do 3Dof (x, y, theta) localization. Once you have implemented the kalman filter, you should figure out how to visualize the poses. Currently poses are published from the skeleton as Pose2DStamped messages. These are not suported by Rviz. You will need to either need to plot your robot's trajectory using alternative tools or change the message type to use one supported by Rviz.
 
-Test both of your localization methods on map-1. For each method, record a video of the robot navigating and create a simultaneous visualization of the pose estimates. You should lay these out side-by-side in a video editor of your choice and submit it as part of your report.
+Test both of your localization methods on `map-1`. For each method, record a video of the robot navigating and create a simultaneous visualization of the pose estimates. You should lay these out side-by-side in a video editor of your choice and submit it as part of your report.
 
 
-## TASK-4 Create a physical map-2 using duckietown supplies
+## TASK-4 Create a physical `map-2` using duckietown supplies
 
 ### 1. Create a map in your environment using the instructions provided [here](https://bit.ly/cse571-physical-map).
 
 
 ### 2. Change the static publisher and map file to see the map in RViz with landmarks.
 
-- By default, the `/launchers/default.sh` executes the `viz_node.launch` (for the map-1). Change this to `viz_node_2.launch` to visualize map-2 in RViz.
-- By default, the `/launchers/default.sh` executes the `static_at_tf_publisher.launch`. Change this to `static_at_tf_publisher_2.launch` to visualize landmarks (AprilTAGs frames).
+- By default, the `/launchers/default.sh` executes the `viz_node.launch` (for the `map-1`). Change this to `viz_node_2.launch` to visualize `map-2` in RViz.
+- By default, the `/launchers/default.sh` executes the `static_at_tf_publisher1.launch`. Change this to `static_at_tf_publisher2.launch` to visualize landmarks (AprilTAGs frames).
 - Now build and run the project. You will be able to see the map and the static transforms in RViz as below.
 
 ![Map2_Rviz](./images/map2_rviz.png)
 
 ### 3. Record what you can visualize in RViz and an image of the physical map created.
 
-## TASK-5 Test `sensor_fusion_localization` package on map-2.
+## TASK-5 Test `sensor_fusion_localization` package on `map-2`.
 
 Similar to Task 4, test your sensor fusion methods on the new map and record videos of your results. These videos should be submitted as part of your report.
 
 ## TASK-6 Write up a report
 
-For the submission of this project, you should submit a 3-4 page report. The report should explain the EKF algorithm, your implementation, your results, and what you could do to improve on the results, both in terms of setup (i.e. how might you create a more stable environment for localization) and in terms of methodology (what other methods would you use to do a better job and why). As part of your report, you should also submit videos of your robot alongside the estimated path. 
+For the submission of this project, you should submit a 3-4 page report.
+Here is a list of items that should be included in the report.
+1. **[20 points]** A video of what you can visualize using Rviz or other tools 
+   when you build the provided packages on your robot.
+1. **[10 points]** A video of Rviz or equivalent visualization and (an) image(s) of the physical map for `map-1`.
+1. Implementation and experiments on `map-1`:
+    1. **[20 points]** Explanation of EKF, PF algorithms, and your implementation details.
+    1. **[20 points]** A side-by-side video of visualization and robot navigation on `map-1` with EKF.
+    1. **[20 points]** A side-by-side video of visualization and robot navigation on `map-1` with PF.
+1. **[10 points]** Video of visualization and (an) image(s) of the physical map for `map-2`.
+1. Experiments on `map-2`:
+    1. **[40 points]** A side-by-side video of visualization and robot navigation on `map-2` with EKF.
+    1. **[40 points]** A side-by-side video of visualization and robot navigation on `map-2` with PF.
+1. **[20 points]** Description of what you could do to improve on the results in terms of setup
+   (i.e. how might you create a more stable environment for localization) and 
+   in terms of methodology (what other methods would you use to do a better job and why)
 
 
 # Additional Documentation from Template:
