@@ -128,6 +128,7 @@ Similar to Task 4, test your sensor fusion methods on the new map and record vid
 
 For the submission of this project, you should submit a 3-4 page report.
 Here is a list of items that should be included in the report.
+**Note:** Videos should be uploaded to youtube in the *unlisted* mode and links should be provided in the report.
 1. **[20 points]** A video of what you can visualize using Rviz or other tools 
    when you build the provided packages on your robot.
 1. **[10 points]** A video of Rviz or equivalent visualization and (an) image(s) of the physical map for `map-1`.
