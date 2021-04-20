@@ -1,6 +1,8 @@
 In this project you will be implementing robot localization methods such as Extended Kalman Filter (EKF) and Particle Filter (PF). Given a map, your localization method will take sensor measurements of landmarks observed by the robot, and control updates from teleoperation of the robot, to localize the robot in the map. 
 
-For this project you will be working in a group of 3. Please use the [google-sheet](https://docs.google.com/spreadsheets/d/1JdiTP-pWkB2OWAwnKYMVp2sqWZbLZuDr9h5trelGDG4/edit?usp=sharing) and Discord channel to form a group of 3. Once you form a team add your team assignment in the same [google-sheet](https://docs.google.com/spreadsheets/d/1JdiTP-pWkB2OWAwnKYMVp2sqWZbLZuDr9h5trelGDG4/edit?usp=sharing) along with a `team-name`. See the post about this on [Edstem](https://edstem.org/us/courses/4944/discussion/369568).
+For this project you will be working in a group of 3. Please use the [google-sheet](https://docs.google.com/spreadsheets/d/1JdiTP-pWkB2OWAwnKYMVp2sqWZbLZuDr9h5trelGDG4/edit?usp=sharing) and Discord channel to form a group of 3. See the post about this on [Edstem](https://edstem.org/us/courses/4944/discussion/369568).
+
+Once you form a team please drop an email to us (afishman@cs.washington.edu, rohjunha@cs.washington.edu, kdesingh@cs.washington.edu) along with a `team-name`. 
 
 # Deadline 05/07/2021, 11:59 PM Pacific. 
 - Project report submission on gradescope.
