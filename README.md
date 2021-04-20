@@ -1,12 +1,19 @@
-This project is about implementing robot localization methods such as Extended Kalman Filter (EKF) and Particle Filter (PF). Given a map, your localization method will take sensor measurements of landmarks observed by the robot, and control updates from teleoperation of the robot, to localize the robot in the map.
+In this project you will be implementing robot localization methods such as Extended Kalman Filter (EKF) and Particle Filter (PF). Given a map, your localization method will take sensor measurements of landmarks observed by the robot, and control updates from teleoperation of the robot, to localize the robot in the map. 
 
-# Deadline 05/07/2021
+For this project you will be working in a group of 3. Please use the [google-sheet](https://docs.google.com/spreadsheets/d/1JdiTP-pWkB2OWAwnKYMVp2sqWZbLZuDr9h5trelGDG4/edit?usp=sharing) and Discord channel to form a group of 3. Once you form a team add your team assignment in the same [google-sheet](https://docs.google.com/spreadsheets/d/1JdiTP-pWkB2OWAwnKYMVp2sqWZbLZuDr9h5trelGDG4/edit?usp=sharing) along with a `team-name`. See the post about this on [Edstem](https://edstem.org/us/courses/4944/discussion/369568).
+
+# Deadline 05/07/2021, 11:59 PM Pacific. 
+- Project report submission on gradescope.
+- Code submission will be via github repositories. Each group should fork this repo to create their own repositories. Name their repos to `cse571-sp21-project-1-{team-name}` give the TAs (github ids - fishbotics, rohjunha, desinghkar) access to these github repositories.
+
 
 # Recommended exercises:
 
 - Understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
 
-- Understand ROS topics, subscriber, publisher, tf message, broadcaster, Markers for drawing in Rviz. Please see the [documentation](http://wiki.ros.org/ROS/Tutorials)
+- Understand ROS topics, subscriber, publisher, tf message, broadcaster, Markers for drawing in RViz. Please see the [documentation](http://wiki.ros.org/ROS/Tutorials)
+
+- ROS provides packages that can be used draw shapes in RViz. You can use this to trace different paths taken by the robot. Please see the documentation [link1](https://stackoverflow.com/questions/63774548/plot-multiple-paths-in-rviz) and [link2](https://www.programcreek.com/python/example/88812/visualization_msgs.msg.Marker)
 
 
 # Overview of cse571-sp21-project-1 repository
@@ -15,10 +22,10 @@ This project is about implementing robot localization methods such as Extended K
 
 - `my_at_localization` that localizes the AprilTAGs seen by the robot
 - `my_static_tf` that publishes coordinate transforms (position and orientation) of all the landmarks in predetermined maps. These coordinate frames are in the form of ROS `\tf` messages
-- `my_viz` that can publish map information and path traced by the robot in a visualizer (ROS visualizer called RViz).
+- `my_viz` that can publish map information and transformations in a visualizer (ROS visualizer called RViz).
 - `image_processing` that contains utility functions to process images.
 
-### cse571-sp21-project-1 repo contains TODO packages that you will have to edit in order to complete the project:
+### cse571-sp21-project-1 repo contains packages that you will have to edit in order to complete the project:
 
 - `sensor_fusion_localization` that localizes the robot based on the velocity control and AprilTAG localization.
 
@@ -58,7 +65,7 @@ cd cse571-sp21-project-1`
 ### 4. Visualize what is happening by logging into the robot with the below command.
 
 `dts start_gui_tools --vnc ROBOT_NAME` and open `http://localhost:8087/`
-Open the Rviz, add `\tf` from the panel like the figure below.
+Open the RViz, add `\tf` from the panel like the figure below.
 ![add_tf](./images/add_tf.png)
 *Adding TF to Displays.*
 
@@ -66,7 +73,7 @@ Open the Rviz, add `\tf` from the panel like the figure below.
 *Example of visualization after adding TF to Displays.*
 [Here is the video of what it will look like](https://drive.google.com/file/d/1f476TsCCE0Qec0i8Z3L4r3IU_1kj-CZV/view?usp=sharing)
 
-### 5. Record a screen recording of what you can visualize using Rviz and other tools (similar to above).
+### 5. Record a screen recording of what you can visualize using RViz and other tools (similar to above).
 
 ### (Note) How did the run command know what to run? Change what you are launching with the above run command.
 
@@ -85,7 +92,7 @@ Be sure to follow these [instructions](https://docs.duckietown.org/daffy/duckiet
 
 In RViz, coordinate frames are colored with x-axis in red, y-axis in green and z-axis in blue. For `map-1`, AprilTAG-31 (AT-31) is the global origin frame. map-1 has two other tags (AT-32 and AT-65) with fixed transformation with respect to the map frame. `my_static_tf` package runs by default from the `./launchers/default.sh` to publish `\tf` tree that you can see in RViz. So overall, you can select 4 transforms (`map`, `april_tag_31`, `april_tag_32`, `april_tag_65`) in RViz to see the map. 
 
-![Map1_Rviz](./images/map1_rviz.png)
+![Map1_RViz](./images/map1_rviz.png)
 
 ### 3. Understanding the measurements published in the map frame.
 
@@ -103,7 +110,7 @@ Notice that all of these transforms is specific to a AprilTAG. This is the measu
 
 After you understand the TF-tree, you can start thinking about our two filtering methods: the Extended Kalman Filter and the Particle Filter. Your task is going to involve modifying the (very rough) skeleton code we provide [here](./packages/sensor_fusion_localization/src/sensor_fusion_node.py) and demonstrating results with the two methods.
 
-We have provided a motion model for you, but you will need to consider how to set the covariance matrix, how to handle the sensor measurements, and, for the Kalmand Filter, how to linearize it. The sensor measurements should come in the form of the readings from the AprilTags. Note that the AprilTags provide a 6-DOF pose while we are only attempting to do 3Dof (x, y, theta) localization. Once you have implemented the kalman filter, you should figure out how to visualize the poses. Currently poses are published from the skeleton as Pose2DStamped messages. These are not suported by Rviz. You will need to either need to plot your robot's trajectory using alternative tools or change the message type to use one supported by Rviz.
+We have provided a motion model for you, but you will need to consider how to set the covariance matrix, how to handle the sensor measurements, and, for the Kalmand Filter, how to linearize it. The sensor measurements should come in the form of the readings from the AprilTags. Note that the AprilTags provide a 6-DOF pose while we are only attempting to do 3Dof (x, y, theta) localization. Once you have implemented the kalman filter, you should figure out how to visualize the poses. Currently poses are published from the skeleton as Pose2DStamped messages. These are not suported by RViz. You will need to either need to plot your robot's trajectory using alternative tools or change the message type to use one supported by RViz.
 
 Test both of your localization methods on `map-1`. For each method, record a video of the robot navigating and create a simultaneous visualization of the pose estimates. You should lay these out side-by-side in a video editor of your choice and submit it as part of your report.
 
@@ -119,7 +126,7 @@ Test both of your localization methods on `map-1`. For each method, record a vid
 - By default, the `/launchers/default.sh` executes the `static_at_tf_publisher1.launch`. Change this to `static_at_tf_publisher2.launch` to visualize landmarks (AprilTAGs frames).
 - Now build and run the project. You will be able to see the map and the static transforms in RViz as below.
 
-![Map2_Rviz](./images/map2_rviz.png)
+![Map2_RViz](./images/map2_rviz.png)
 
 ### 3. Record what you can visualize in RViz and an image of the physical map created.
 
@@ -134,9 +141,9 @@ Here is a list of items that should be included in the report.
 
 **Note: Videos should be uploaded to youtube in the *unlisted* mode and links should be provided in the report.**
 1. Group members information: Full Name, Email ID.
-1. **[20 points]** A video of what you can visualize using Rviz or other tools 
+1. **[20 points]** A video of what you can visualize using RViz or other tools 
    when you build the provided packages on your robot.
-1. **[10 points]** A video of Rviz or equivalent visualization and (an) image(s) of the physical map for `map-1`.
+1. **[10 points]** A video of RViz or equivalent visualization and (an) image(s) of the physical map for `map-1`.
 1. Implementation and experiments on `map-1`:
     1. **[20 points]** Explanation of EKF, PF algorithms, and your implementation details.
     1. **[20 points]** A side-by-side video of visualization and robot navigation on `map-1` with EKF.
@@ -149,27 +156,3 @@ Here is a list of items that should be included in the report.
    (i.e. how might you create a more stable environment for localization) and 
    in terms of methodology (what other methods would you use to do a better job and why)
 
-
-# Additional Documentation from Template:
-### 1. Define dependencies
-
-List the dependencies in the files `dependencies-apt.txt` and
-`dependencies-py3.txt` (apt packages and pip packages respectively).
-
-### 2. Place your code
-
-Place your code in the directory `/packages/` of
-your new repository.
-
-### 3. Setup launchers
-
-The directory `/launchers` can contain as many launchers (launching scripts)
-as you want. A default launcher called `default.sh` must always be present.
-
-If you create an executable script (i.e., a file with a valid shebang statement)
-a launcher will be created for it. For example, the script file 
-`/launchers/my-launcher.sh` will be available inside the Docker image as the binary
-`dt-launcher-my-launcher`.
-
-When launching a new container, you can simply provide `dt-launcher-my-launcher` as
-command.
