@@ -7,15 +7,24 @@
 - `image_processing` that contains utility functions to process images.
 
 ### cse571-sp21-project-1 repo contains TODO packages that you will have to edit in order to complete the project:
-- `my_kf_localization` that localizes the robot based on the velocity control and AprilTAG localization.
+- `sensor_fusion_localization` that localizes the robot based on the velocity control and AprilTAG localization.
 
 You can see them in the `./packages/` path.
 The source code for each of these packages are inside their respective `src/` folders. For example for `my_at_localization` you will see the source code in the path `./packages/my_at_localization/src/`.
 
-### (Recommended exercies) To understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
+### (Recommended exercise) To understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
+
+# Outline of tasks in this project:
+### TASK-1 Build the provided packages, run it on the robot, record what you can visualize.
+### TASK-2 Create a physical map-1 using duckietown supplies.
+### TASK-3 Implement `sensor_fusion_localization` package and test on map-1.
+### TASK-4 Create a physical map-2 using duckietown supplies.
+### TASK-5 Test `sensor_fusion_localization` package on map-2.
+### TASK-6 Write up a report.
 
 
-## [TASK 1] Build the provided packages, run it on the robot, record what you can visualize.
+# Detailed description of tasks:
+## TASK-1 Build the provided packages, run it on the robot, record what you can visualize.
 After completing project 0.5. You must be able to communicate with your robot from your local computer using `dts shell`
 
 ### 1. Clone the cse571-sp21-project-1 repository on to your local computer
@@ -40,7 +49,9 @@ Open the Rviz, add `\tf` from the panel.
 By default, the above command will launch the package(s) indicated in the `./launchers/default.sh` file. 
 Be sure to follow these [instructions](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html) in order to build. You cannot build this on your desktop using the typical `docker build` workflow. 
 
-## [TASK 2] Create a physical map-1 using duckietown supplies
+
+
+## TASK-2 Create a physical map-1 using duckietown supplies
 
 ### 1. Create a map in your environment that looks and measures like below. Note that consistent height of the tag center to the base of the stand will avoid noise in the estimation.
 ![Map1](./images/map1.png)
@@ -59,12 +70,16 @@ It is important to understand the TF tree.
 
 Notice that all of these transforms is specific to a AprilTAG. This is the measurement we provide you when a robot detects an AprilTAG. At the end of the Task 1, you should be able to visualize these transforms in RViz. Move the robot around and see how these transforms change. You can also change the visualization's global frame from \map to any other frame using the "Global options" -> "Fixed frame" in RViz.
 
-## [TASK 3] Implement `sensor_fusion_localization` package and test on map-1.
+
+
+## TASK-3 Implement `sensor_fusion_localization` package and test on map-1.
 After you understand the TF-tree, you can start thinking about the Extended Kalman Filter. Your task is going to involve modifying the (very rough) skeleton code we provide [here](./packages/sensor_fusion_localization/src/sensor_fusion_node.py). We have provided a motion model for you, but you will need to consider how to linearize it, how to set the covariance matrix, and how to handle the sensor measurements. The sensor measurements should come in the form of the readings from the AprilTags. Note that the AprilTags provide a 6-DOF pose while we are only attempting to do 3Dof (x, y, theta) localization. Once you have implemented the kalman filter, you should figure out how to visualize the poses. Currently poses are published from the skeleton as Pose2DStamped messages. These are not suported by Rviz. You will need to either need to plot your robot's trajectory using alternative tools or change the message type to use one supported by Rviz.
 
 Test your localization on your map-1. Record a video of the robot navigating and create a simultaneous visualization of the pose estimates. You should lay these out side-by-side in a video editor of your choice and submit it as part of your report.
 
-## [TASK 4] Create a physical map-2 using duckietown supplies
+
+
+## TASK-4 Create a physical map-2 using duckietown supplies
 
 ### 1. Create a map in your environment using the instructions provided [here](https://bit.ly/cse571-physical-map).
 
@@ -76,11 +91,14 @@ Test your localization on your map-1. Record a video of the robot navigating and
 
 ![Map2_Rviz](./images/map2_rviz.png)
 
-## [TASK 5] Test `sensor_fusion_localization` package on map-2.
+## TASK-5 Test `sensor_fusion_localization` package on map-2.
 Similar to Task 4, test your sensor fusion on the new map, record videos of your results, and submit the report.
 
-## [TASK 6] Write up a report
+## TASK-6 Write up a report
 For the submission of this project, you should submit a 3-4 page report. The report should explain the EKF algorithm, your implementation, your results, and what you could do to improve on the results, both in terms of setup (i.e. how might you create a more stable environment for localization) and in terms of methodology (what other methods would you use to do a better job and why). As part of your report, you should also submit videos of your robot alongside the estimated path. 
+
+
+
 
 # Additional Documentation from Template:
 ### 1. Define dependencies
