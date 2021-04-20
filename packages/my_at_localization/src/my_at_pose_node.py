@@ -15,6 +15,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import CompressedImage
 from sensor_msgs.msg import Image
+from std_msgs.msg import Int32MultiArray 
 from tf.transformations import *
 
 
@@ -86,6 +87,8 @@ class ATPoseNode(DTROS):
 
         self.image_pub = rospy.Publisher(f'/{self.veh}/rectified_image', Image, queue_size=10)
 
+        self.tag_pub = rospy.Publisher(f'/{self.veh}/detected_tags', Int32MultiArray, queue_size=5)
+        
         self.log("Initialized!")
 
     def getCameraInfo(self, cam_msg):
@@ -200,6 +203,8 @@ class ATPoseNode(DTROS):
         camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
         detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
         detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
+        array_for_pub = Int32MultiArray(data=detected_tag_ids)
+        self.tag_pub.publish(array_for_pub)
         for tag_id, tag in zip(detected_tag_ids, detected_tags):
             print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
             self._broadcast_detected_tag(image_msg, tag_id, tag)
