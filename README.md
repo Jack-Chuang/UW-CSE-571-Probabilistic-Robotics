@@ -1,5 +1,14 @@
 This project is about implementing robot localization methods such as Extended Kalman Filter (EKF) and Particle Filter (PF). Given a map, your localization method will take sensor measurements of landmarks observed by the robot, and control updates from teleoperation of the robot, to localize the robot in the map.
 
+# Deadline 05/07/2021
+
+# Recommended exercises:
+
+- Understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
+
+- Understand ROS topics, subscriber, publisher, tf message, broadcaster, Markers for drawing in Rviz. Please see the [documentation](http://wiki.ros.org/ROS/Tutorials)
+
+
 # Overview of cse571-sp21-project-1 repository
 
 ### cse571-sp21-project-1 repo contains four packages that you won't have to modify:
@@ -15,12 +24,6 @@ This project is about implementing robot localization methods such as Extended K
 
 You can see them in the `./packages/` path.
 The source code for each of these packages are inside their respective `src/` folders. For example for `my_at_localization` you will see the source code in the path `./packages/my_at_localization/src/`.
-
-# Recommended Exercises:
-
-- Understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
-
-- Understand ROS topics, subscriber, publisher, tf message, broadcaster, Markers for drawing in Rviz. Please see the [documentation](http://wiki.ros.org/ROS/Tutorials)
 
 
 # Outline of tasks in this project:
