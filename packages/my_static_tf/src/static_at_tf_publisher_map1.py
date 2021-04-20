@@ -10,40 +10,14 @@ from geometry_msgs.msg import TransformStamped
 __TAG_ID_DICT = {32: 32, 33: 31, 65: 61, 31: 33, 57: 57, 61: 65, 10: 11, 11: 10, 9: 9, 24: 26, 25: 25, 26: 24}
 
 
-def fetch_tag_id(tag) -> int:
-    if tag.tag_id not in __TAG_ID_DICT:
-        return -1
+def fetch_tag_id(tag):
     return __TAG_ID_DICT[tag.tag_id]
 
 
-# REFERENCE_ID = 31
-# TRANSFORM_DICT = {
-#     (31, 32): ((0, 55, 0), (0, 0, 0)),
-#     (31, 61): ((1.25, 85, 0), (0, 0, 0)),
-#     (31, 65): ((53.5, 1.75, 0), (0, 0, 0)),
-#     (31, 57): ((112.25, 15.25, 0), (0, 0, 0)),
-#     (31, 33): ((112.25, 39.75, 0), (0, 0, 0)),
-#     (31, 9): ((60.25, 74.25, 0), (0, 0, 0)),
-#     (31, 11): ((60.25, 98.75, 0), (0, 0, 0)),
-#     (31, 24): ((119.5, 112.25, 0), (0, 0, 0)),
-#     (31, 10): ((173, 114, 0), (0, 0, 0)),
-#     (31, 26): ((173, 59, 0), (0, 0, 0)),
-#     (31, 25): ((171.25, 29, 0), (0, 0, 0)),
-# }
-
-MAP_TRANSFORM_DICT = {
-    31: ((0.01, 0.01, 0.075), (0, 0, 3.9269875)),
-    32: ((0.01, 0.56, 0.075), (0, 0, 3.9269875)),
-    61: ((0.0225, 0.86, 0.075), (0, 0, 3.14159)),
-    65: ((0.545, 0.0275, 0.075), (0, 0, 4.712385)),
-    57: ((1.1325, 0.1625, 0.075), (0, 0, 0)),
-    33: ((1.1325, 0.4075, 0.075), (0, 0, 0)),
-    9: ((0.6125, 0.7525, 0.075), (0, 0, 3.14159)),
-    11: ((0.6125, 0.9975, 0.075), (0, 0, 3.14159)),
-    24: ((1.205, 1.1325, 0.075), (0, 0, 1.570795)),
-    10: ((1.74, 1.15, 0.075), (0, 0, 0.7853975)),
-    26: ((1.74, 0.6, 0.075), (0, 0, 0.7853975)),
-    25: ((1.7225, 0.3, 0.075), (0, 0, 0)),
+REFERENCE_ID = 31
+TRANSFORM_DICT = {
+    (31, 32): ((0, 0.5, 0), (0, 0, 0)),
+    (31, 65): ((0.5, 0.25, 0), (0, 0, 0))
 }
 
 
@@ -101,29 +75,27 @@ class StaticATTFPublisherNode(DTROS):
         # publish message every 1 second
         rate = rospy.Rate(1)  # 1Hz
         while not rospy.is_shutdown():
-            # for cand_tag_ids, transform_params in TRANSFORM_DICT.items():
-            #     tag_frame_ids = list(map(lambda x: 'april_tag_{}'.format(x), cand_tag_ids))
-            #     self._broadcast_tf(
-            #         parent_frame_id=tag_frame_ids[0],
-            #         child_frame_id=tag_frame_ids[1],
-            #         translations=transform_params[0],
-            #         euler_angles=transform_params[1]
-            #     )
+            for cand_tag_ids, transform_params in TRANSFORM_DICT.items():
+                tag_frame_ids = list(map(lambda x: 'april_tag_{}'.format(x), cand_tag_ids))
+                self._broadcast_tf(
+                    parent_frame_id=tag_frame_ids[0],
+                    child_frame_id=tag_frame_ids[1],
+                    translations=transform_params[0],
+                    euler_angles=transform_params[1]
+                )
 
             map_frame_id = 'map'
-            for tag_id, (translations, euler_angles) in MAP_TRANSFORM_DICT.items():
-                tag_frame_id = 'april_tag_{}'.format(tag_id)
-                self._broadcast_tf(
-                    parent_frame_id=map_frame_id,
-                    child_frame_id=tag_frame_id,
-                    translations=translations,
-                    euler_angles=euler_angles)
+            tag_frame_id = 'april_tag_{}'.format(REFERENCE_ID)
+            self._broadcast_tf(
+                parent_frame_id=map_frame_id,
+                child_frame_id=tag_frame_id,
+                translations=(0, 0, 0.075))
             rate.sleep()
 
 
 if __name__ == '__main__':
     # create the node
-    node = StaticATTFPublisherNode(node_name='static_at_tf_publisher')
+    node = StaticATTFPublisherNode(node_name='static_at_tf_publisher_map1')
     # run node
     node.run()
     # keep spinning
