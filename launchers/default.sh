@@ -22,7 +22,7 @@ dt-launchfile-init
 dt-exec roslaunch sensor_fusion_localization sensor_fusion_node.launch veh:=$VEHICLE_NAME
 dt-exec roslaunch my_viz viz_node.launch veh:=$VEHICLE_NAME
 dt-exec roslaunch my_viz trace_node.launch veh:=$VEHICLE_NAME
-dt-exec roslaunch my_static_tf static_at_tf_publisher.launch veh:=$VEHICLE_NAME
+dt-exec roslaunch my_static_tf static_at_tf_publisher1.launch veh:=$VEHICLE_NAME
 dt-exec roslaunch my_at_localization my_at_pose_node.launch veh:=$VEHICLE_NAME
 #dt-exec roslaunch my_viz viz_node.launch veh:=$VEHICLE_NAME
 
