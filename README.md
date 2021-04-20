@@ -46,10 +46,18 @@ Be sure to follow these [instructions](https://docs.duckietown.org/daffy/duckiet
 ![Map1](./images/map1.png)
 
 ### 2. Understanding the coordinate frames in the map (both physical as well as what is visualized in the RViz).
-In RViz, coordinate frames are colored with x in red, y in green and z in blue. For map-1, AprilTAG-31 (AT-31) is the global origin frame. map-1 has two other tags (AT-32 and AT-65) with fixed transformation with respect to the map frame. `my_static_tf` package runs by default from the `./launchers/default.sh` to publish `\tf` tree that you can see in RViz. So overall, you can select 4 transforms (`map`, `april_tag_31`, `april_tag_32`, `april_tag_65`) in RViz to see the map.
+In RViz, coordinate frames are colored with x in red, y in green and z in blue. For map-1, AprilTAG-31 (AT-31) is the global origin frame. map-1 has two other tags (AT-32 and AT-65) with fixed transformation with respect to the map frame. `my_static_tf` package runs by default from the `./launchers/default.sh` to publish `\tf` tree that you can see in RViz. So overall, you can select 4 transforms (`map`, `april_tag_31`, `april_tag_32`, `april_tag_65`) in RViz to see the map. 
 
 ![Map1_Rviz](./images/map1_rviz.png)
 
+### 3. Understanding the measurements published in the map frame.
+It is important to understand the TF tree.
+- When the robot detects an AT, a transform is published linking `april_tag_{id}` to its internal pose as read by the camera `april_tag_cam_{id}`. 
+- Another transform links `april_tag_cam_{id}` and `at_{id}_camera_rgb_link` (which is the internal transform of the camera). 
+- Another transform links the internal camera to its physical location via `at_{id}_camera_rgb_link` to `at_{id}_camera_link`. 
+- Using the design of the robot, we can get the transform between `at_{id}_camera_link` to the base of the robot `at_{id}_base_link`. 
+
+Notice that all of these transforms is specific to a AprilTAG. This is the measurement we provide you when a robot detects an AprilTAG.
 
 ## [TASK 3] Implement `my_kf_localization` package and test on map-1.
 [TODO] Adam
@@ -58,7 +66,7 @@ In RViz, coordinate frames are colored with x in red, y in green and z in blue. 
 
 ### 1. Create a map in your environment that looks and measures like below. Note that consistent height of the tag center to the base of the stand will avoid noise in the estimation.
 
-![Map1](./images/map1.png)
+[TODO] Junha to give the map and Karthik to run and test and document here.
 
 ## [TASK 5] Test `my_kf_localization` package on map-2.
 [TODO] Adam
