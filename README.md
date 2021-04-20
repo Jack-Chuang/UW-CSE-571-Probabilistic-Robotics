@@ -47,15 +47,21 @@ Be sure to follow these [instructions](https://docs.duckietown.org/daffy/duckiet
 
 ### 2. Understanding the coordinate frames in the map (both physical as well as what is visualized in the RViz).
 In RViz, coordinate frames are colored with x in red, y in green and z in blue. For map-1, AprilTAG-31 (AT-31) is the global origin frame. map-1 has two other tags (AT-32 and AT-65) with fixed transformation with respect to the map frame. `my_static_tf` package runs by default from the `./launchers/default.sh` to publish `\tf` tree that you can see in RViz. So overall, you can select 4 transforms (`map`, `april_tag_31`, `april_tag_32`, `april_tag_65`) in RViz to see the map.
+
 ![Map1_Rviz](./images/map1_rviz.png)
 
 
 ## [TASK 3] Implement `my_kf_localization` package and test on map-1.
+[TODO] Adam
 
 ## [TASK 4] Create a physical map-2 using duckietown supplies
 
-## [TASK 5] Test `my_kf_localization` package on map-2.
+### 1. Create a map in your environment that looks and measures like below. Note that consistent height of the tag center to the base of the stand will avoid noise in the estimation.
 
+![Map1](./images/map1.png)
+
+## [TASK 5] Test `my_kf_localization` package on map-2.
+[TODO] Adam
 
 # Additional Documentation from Template:
 ### 1. Define dependencies
