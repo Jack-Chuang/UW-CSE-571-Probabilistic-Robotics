@@ -23,7 +23,7 @@ After completing project 0.5. You must be able to communicate with your robot fr
 cd cse571-sp21-project-1`
 
 ### 2. Build the above mentioned packages on the duckiebot
-`dts dts devel build -f -H {ROBOT_NAME}.local` from the `{PATH}\cse571-sp21-project-1` folder.
+`dts devel build -f -H {ROBOT_NAME}.local` from the `{PATH}\cse571-sp21-project-1` folder.
 
 ### 3. Run the packages on the duckiebot.
 `dts devel run -H {ROBOT_NAME}.local` from the `{PATH}\cse571-sp21-project-1` folder.
@@ -31,10 +31,10 @@ cd cse571-sp21-project-1`
 ### 4. Visualize what is happening by logging into the robot with the below command.
 `dts start_gui_tools --vnc ROBOT_NAME` and open `http://localhost:8087/`
 Open the Rviz, add `\tf` from the panel.
-[Here is the video of what it will look like](Video)
-[TODO] 
+![VNC](./images/novnc.png)
+[Here is the video of what it will look like](https://drive.google.com/file/d/1f476TsCCE0Qec0i8Z3L4r3IU_1kj-CZV/view?usp=sharing)
 
-### 5. Record a screen recording of what you can visualize using Rviz and other tools.
+### 5. Record a screen recording of what you can visualize using Rviz and other tools (similar to above).
 
 ### (Note) How did the run command know what to run? Change what you are launching with the above run command.
 By default, the above command will launch the package(s) indicated in the `./launchers/default.sh` file. 
