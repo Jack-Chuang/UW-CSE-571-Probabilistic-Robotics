@@ -14,7 +14,12 @@
 You can see them in the `./packages/` path.
 The source code for each of these packages are inside their respective `src/` folders. For example for `my_at_localization` you will see the source code in the path `./packages/my_at_localization/src/`.
 
-### (Recommended exercise) To understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
+# Recommended Exercises:
+
+### Understand the folder structure and how to create new packages, build and run the packages on local as well as on robot, please see the [documentation](https://docs.duckietown.org/daffy/duckietown-robotics-development/out/dt_infrastructure.html).
+
+### Understand ROS topics, subscriber, publisher, tf message, broadcaster, Markers for drawing in Rviz. Please see the [documentation](http://wiki.ros.org/ROS/Tutorials)
+
 
 # Outline of tasks in this project:
 
