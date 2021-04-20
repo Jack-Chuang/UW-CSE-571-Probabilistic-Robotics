@@ -10,14 +10,16 @@ from geometry_msgs.msg import TransformStamped
 __TAG_ID_DICT = {32: 32, 33: 31, 65: 61, 31: 33, 57: 57, 61: 65, 10: 11, 11: 10, 9: 9, 24: 26, 25: 25, 26: 24}
 
 
-def fetch_tag_id(tag):
+def fetch_tag_id(tag) -> int:
+    if tag.tag_id not in __TAG_ID_DICT:
+        return -1
     return __TAG_ID_DICT[tag.tag_id]
 
 
-REFERENCE_ID = 31
-TRANSFORM_DICT = {
-    (31, 32): ((0, 0.5, 0), (0, 0, 0)),
-    (31, 65): ((0.5, 0.25, 0), (0, 0, 0))
+MAP_TRANSFORM_DICT = {
+    31: ((0, 0, 0.075), (0, 0, 0)),
+    32: ((0, 0.5, 0.075), (0, 0, 0)),
+    65: ((0.5, 0.25, 0), (0, 0, 0)),
 }
 
 
@@ -28,11 +30,6 @@ class StaticATTFPublisherNode(DTROS):
             node_name=node_name,
             node_type=NodeType.GENERIC)
         self.veh = rospy.get_namespace().strip('/')
-        # self.pub = rospy.Publisher(
-        #     '/{}/at_tf_static',
-        #     Odometry,
-        #     queue_size=1,
-        #     dt_topic_type=TopicType.LOCALIZATION)
 
     def _broadcast_tf(
             self,
@@ -75,21 +72,14 @@ class StaticATTFPublisherNode(DTROS):
         # publish message every 1 second
         rate = rospy.Rate(1)  # 1Hz
         while not rospy.is_shutdown():
-            for cand_tag_ids, transform_params in TRANSFORM_DICT.items():
-                tag_frame_ids = list(map(lambda x: 'april_tag_{}'.format(x), cand_tag_ids))
-                self._broadcast_tf(
-                    parent_frame_id=tag_frame_ids[0],
-                    child_frame_id=tag_frame_ids[1],
-                    translations=transform_params[0],
-                    euler_angles=transform_params[1]
-                )
-
             map_frame_id = 'map'
-            tag_frame_id = 'april_tag_{}'.format(REFERENCE_ID)
-            self._broadcast_tf(
-                parent_frame_id=map_frame_id,
-                child_frame_id=tag_frame_id,
-                translations=(0, 0, 0.075))
+            for tag_id, (translations, euler_angles) in MAP_TRANSFORM_DICT.items():
+                tag_frame_id = 'april_tag_{}'.format(tag_id)
+                self._broadcast_tf(
+                    parent_frame_id=map_frame_id,
+                    child_frame_id=tag_frame_id,
+                    translations=translations,
+                    euler_angles=euler_angles)
             rate.sleep()
 
 

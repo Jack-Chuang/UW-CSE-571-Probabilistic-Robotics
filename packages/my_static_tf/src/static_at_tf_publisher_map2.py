@@ -16,21 +16,6 @@ def fetch_tag_id(tag) -> int:
     return __TAG_ID_DICT[tag.tag_id]
 
 
-# REFERENCE_ID = 31
-# TRANSFORM_DICT = {
-#     (31, 32): ((0, 55, 0), (0, 0, 0)),
-#     (31, 61): ((1.25, 85, 0), (0, 0, 0)),
-#     (31, 65): ((53.5, 1.75, 0), (0, 0, 0)),
-#     (31, 57): ((112.25, 15.25, 0), (0, 0, 0)),
-#     (31, 33): ((112.25, 39.75, 0), (0, 0, 0)),
-#     (31, 9): ((60.25, 74.25, 0), (0, 0, 0)),
-#     (31, 11): ((60.25, 98.75, 0), (0, 0, 0)),
-#     (31, 24): ((119.5, 112.25, 0), (0, 0, 0)),
-#     (31, 10): ((173, 114, 0), (0, 0, 0)),
-#     (31, 26): ((173, 59, 0), (0, 0, 0)),
-#     (31, 25): ((171.25, 29, 0), (0, 0, 0)),
-# }
-
 MAP_TRANSFORM_DICT = {
     31: ((0.01, 0.01, 0.075), (0, 0, 3.9269875)),
     32: ((0.01, 0.56, 0.075), (0, 0, 3.9269875)),
@@ -101,15 +86,6 @@ class StaticATTFPublisherNode(DTROS):
         # publish message every 1 second
         rate = rospy.Rate(1)  # 1Hz
         while not rospy.is_shutdown():
-            # for cand_tag_ids, transform_params in TRANSFORM_DICT.items():
-            #     tag_frame_ids = list(map(lambda x: 'april_tag_{}'.format(x), cand_tag_ids))
-            #     self._broadcast_tf(
-            #         parent_frame_id=tag_frame_ids[0],
-            #         child_frame_id=tag_frame_ids[1],
-            #         translations=transform_params[0],
-            #         euler_angles=transform_params[1]
-            #     )
-
             map_frame_id = 'map'
             for tag_id, (translations, euler_angles) in MAP_TRANSFORM_DICT.items():
                 tag_frame_id = 'april_tag_{}'.format(tag_id)
