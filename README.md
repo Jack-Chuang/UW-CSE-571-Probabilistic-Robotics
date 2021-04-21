@@ -1,6 +1,6 @@
 In this project you will be implementing robot localization methods such as Extended Kalman Filter (EKF) and Particle Filter (PF). Given a map, your localization method will take sensor measurements of landmarks observed by the robot, and control updates from teleoperation of the robot, to localize the robot in the map. 
 
-For this project you will be working in a group of 3. Please use the [google-sheet](https://docs.google.com/spreadsheets/d/1JdiTP-pWkB2OWAwnKYMVp2sqWZbLZuDr9h5trelGDG4/edit?usp=sharing) and Discord channel to form a group of 3. See the post about this on [Edstem](https://edstem.org/us/courses/4944/discussion/369568).
+For this project you will be working in a group of 3. Please use the Google Sheet and Discord channel to form a group of 3. See the post about this on [Edstem](https://edstem.org/us/courses/4944/discussion/369568).
 
 Once you form a team please drop an email to us (afishman@cs.washington.edu, rohjunha@cs.washington.edu, kdesingh@cs.washington.edu) along with a `team-name`. 
 
@@ -51,9 +51,9 @@ The source code for each of these packages are inside their respective `src/` fo
 
 After completing project 0.5. You must be able to communicate with your robot from your local computer using `dts shell`
 
-### 1. Clone the cse571-sp21-project-1 repository on to your local computer
+### 1. Create a fork of this repo for your project group and then clone it onto your local computer
 
-`git clone https://github.com/fishbotics/cse571-sp21-project-1.git
+`git clone https://github.com/{YOUR USER NAME}/cse571-sp21-project-1.git
 cd cse571-sp21-project-1`
 
 ### 2. Build the above mentioned packages on the duckiebot
