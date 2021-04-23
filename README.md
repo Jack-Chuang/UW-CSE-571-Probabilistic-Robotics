@@ -51,10 +51,13 @@ The source code for each of these packages are inside their respective `src/` fo
 
 After completing project 0.5. You must be able to communicate with your robot from your local computer using `dts shell`
 
-### 1. Create a fork of this repo for your project group and then clone it onto your local computer
+### 1.  Create a private empty repo on github, clone this public repo, change the remote server and push to your private repo.
 
-`git clone https://github.com/{YOUR USER NAME}/cse571-sp21-project-1.git
-cd cse571-sp21-project-1`
+`git clone git@github.com:fishbotics/cse571-sp21-project-1.git cse571-sp21-project-{TEAM_NAME}
+cd cse571-sp21-project-{TEAM_NAME}/
+git remote set-url origin <path to empty private repo>
+git remote add upstream git@github.com:fishbotics/cse571-sp21-project-1.git
+git push origin`
 
 ### 2. Build the above mentioned packages on the duckiebot
 
