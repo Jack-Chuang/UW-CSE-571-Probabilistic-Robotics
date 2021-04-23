@@ -6,8 +6,7 @@ Once you form a team please drop an email to us (afishman@cs.washington.edu, roh
 
 # Deadline 05/07/2021, 11:59 PM Pacific. 
 - Project report submission on gradescope.
-- Code submission will be via github repositories. Each group should fork this repo to create their own repositories. Name their repos to `cse571-sp21-project-1-{team-name}` give the TAs (github ids - fishbotics, rohjunha, desinghkar) access to these github repositories.
-
+- Code submission will be via github repositories. Each group should create a private repo (see Task-1 step-1). Name their repos to `cse571-sp21-project-1-{team-name}` give the TAs (github ids - fishbotics, rohjunha, desinghkar) access to these github repositories. 
 
 # Recommended exercises:
 
