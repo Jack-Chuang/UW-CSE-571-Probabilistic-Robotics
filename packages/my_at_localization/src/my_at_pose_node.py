@@ -137,6 +137,16 @@ class ATPoseNode(DTROS):
     def _broadcast_detected_tag(self, image_msg, tag_id, tag):
         pose = np.identity(4)
         pose[0:3, 0:3] = tag.pose_R
+        # inverse the rotation and tranformation comming out of the AT detector.
+        # The AP detector's output is the camera frame relative to the TAG
+        # According to: https://duckietown.slack.com/archives/C6ZHPV212/p1619876209086300?thread_ts=1619751267.084600&cid=C6ZHPV212
+        # While the transformation below needs TAG relative to camera
+        # Therefore we need to reverse it first.
+        pose = np.transpose(pose) # reverse orientation
+        pose_t = np.ones((4,1)) 
+        pose_t[:3,:] = tag.pose_t
+        pose_t = - np.matmul(pose,pose_t) # reverse translation
+        pose_t = pose_t[:3,:]
 
         q_tag = quaternion_from_matrix(pose)
         tag_frame_id = 'april_tag_{}'.format(tag_id)
@@ -149,7 +159,7 @@ class ATPoseNode(DTROS):
         self._broadcast_tf(
             parent_frame_id=tag_frame_id,
             child_frame_id=tag_cam_frame_id,
-            euler_angles=(-90 * math.pi / 180, 0, 90 * math.pi / 180)
+            euler_angles=(-90 * math.pi / 180, 0, -90 * math.pi / 180)
         )
 
         # ATag cam to camera_rgb_link (again this is internal cam frame)
@@ -157,7 +167,7 @@ class ATPoseNode(DTROS):
             parent_frame_id=tag_cam_frame_id,
             child_frame_id=camera_rgb_link_frame_id,
             stamp=image_msg.header.stamp,
-            translations=tag.pose_t,
+            translations=pose_t,
             quarternion=q_tag
         )
 
@@ -166,7 +176,7 @@ class ATPoseNode(DTROS):
             parent_frame_id=camera_rgb_link_frame_id,
             child_frame_id=camera_link_frame_id,
             stamp=image_msg.header.stamp,
-            euler_angles=(0, 90 * math.pi / 180, -90 * math.pi / 180)
+            euler_angles=(0, -90 * math.pi / 180, 90 * math.pi / 180)
         )
 
         # camera_link to base_link of robot
