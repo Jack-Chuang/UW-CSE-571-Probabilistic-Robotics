@@ -135,20 +135,20 @@ class ATPoseNode(DTROS):
         br.sendTransform(ts)
 
     def _broadcast_detected_tag(self, image_msg, tag_id, tag):
-        pose = np.identity(4)
-        pose[0:3, 0:3] = tag.pose_R
         # inverse the rotation and tranformation comming out of the AT detector.
         # The AP detector's output is the camera frame relative to the TAG
         # According to: https://duckietown.slack.com/archives/C6ZHPV212/p1619876209086300?thread_ts=1619751267.084600&cid=C6ZHPV212
         # While the transformation below needs TAG relative to camera
         # Therefore we need to reverse it first.
-        pose = np.transpose(pose) # reverse orientation
-        pose_t = np.ones((4,1)) 
-        pose_t[:3,:] = tag.pose_t
-        pose_t = - np.matmul(pose,pose_t) # reverse translation
-        pose_t = pose_t[:3,:]
+        pose_R = np.identity(4)
+        pose_R[:3, :3] = tag.pose_R
+        inv_pose_R = np.transpose(pose_R)
+        pose_t = np.ones((4, 1)) 
+        pose_t[:3, :] = tag.pose_t
+        inv_pose_t = -np.matmul(inv_pose_R, pose_t)
+        out_q = quaternion_from_matrix(inv_pose_R)
+        out_t = inv_pose_t[:3, :]
 
-        q_tag = quaternion_from_matrix(pose)
         tag_frame_id = 'april_tag_{}'.format(tag_id)
         tag_cam_frame_id = 'april_tag_cam_{}'.format(tag_id)
         camera_rgb_link_frame_id = 'at_{}_camera_rgb_link'.format(tag_id)
@@ -167,8 +167,8 @@ class ATPoseNode(DTROS):
             parent_frame_id=tag_cam_frame_id,
             child_frame_id=camera_rgb_link_frame_id,
             stamp=image_msg.header.stamp,
-            translations=pose_t,
-            quarternion=q_tag
+            translations=out_t,
+            quarternion=out_q
         )
 
         # camera_rgb_link to camera_link (internal cam frame to physical cam frame)
