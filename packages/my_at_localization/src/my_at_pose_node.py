@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import absolute_import, unicode_literals
+
 from typing import Tuple, Optional, List
 
 import cv2
@@ -18,6 +20,21 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Int32MultiArray 
 from tf.transformations import *
 
+from sensor_msgs.msg import Joy
+
+# imports for AMQ
+
+import datetime
+
+from kombu import Connection
+from kombu import Exchange
+from kombu import Producer
+from kombu import Queue
+import sys
+import time
+
+
+
 
 __TAG_ID_DICT = {32: 32, 33: 31, 65: 61, 31: 33, 57: 57, 61: 65, 10: 11, 11: 10, 9: 9, 24: 26, 25: 25, 26: 24}
 
@@ -32,7 +49,6 @@ class ATPoseNode(DTROS):
         Args:
             node_name (:obj:`str`): a unique, descriptive name for the ROS node
         Configuration:
-
         Publisher:
             ~/rectified_image (:obj:`Image`): The rectified image
             ~at_localization (:obj:`PoseStamped`): The computed position broadcasted in TFs
@@ -51,6 +67,25 @@ class ATPoseNode(DTROS):
         self.bridge = CvBridge()
         self.camera_info = None
         self.Rectify = None
+        
+        # Default RabbitMQ server URI
+        self.rabbit_url = 'amqp://user2:rmq2021@usw-gp-vm.westus.cloudapp.azure.com:5672//'
+
+        # Kombu Connection
+        self.conn = Connection(self.rabbit_url)
+        self.channel = self.conn.channel()
+        
+        # Kombu Exchange
+        # - set delivery_mode to transient to prevent disk writes for faster delivery
+        self.exchange = Exchange("video-exchange", type="direct", delivery_mode=1)
+        self.video_producer = Producer(exchange=self.exchange, channel=self.channel, routing_key="video")
+        
+        # Kombu Queue
+        self.video_queue = Queue(name="video-queue", exchange=self.exchange, routing_key="video") 
+        self.video_queue.maybe_bind(self.conn)
+        self.video_queue.declare()
+        
+        self.encode_param = [int(cv2.IMWRITE_JPEG_QUALITY),90]
 
         self.at_detector = Detector(families='tag36h11',
                                     nthreads=4,
@@ -73,8 +108,9 @@ class ATPoseNode(DTROS):
         self.camera_feed_sub = rospy.Subscriber(
             camera_topic,
             CompressedImage,
-            self.detectATPose,
-            queue_size=1
+            self.lane_detection,
+            queue_size=1,
+            buff_size=2**24
         )
 
         camera_info_topic = f'/{self.veh}/camera_node/camera_info'
@@ -88,6 +124,8 @@ class ATPoseNode(DTROS):
         self.image_pub = rospy.Publisher(f'/{self.veh}/rectified_image', Image, queue_size=10)
 
         self.tag_pub = rospy.Publisher(f'/{self.veh}/detected_tags', Int32MultiArray, queue_size=5)
+        
+        self.motion_pub = rospy.Publisher(f'/{self.veh}/joy', Joy, queue_size=1)
         
         self.log("Initialized!")
 
@@ -188,12 +226,13 @@ class ATPoseNode(DTROS):
             euler_angles=(0, -15 * math.pi / 180, 0)
         )
 
-    def detectATPose(self, image_msg):
+    def lane_detection(self, image_msg):
         """
             Image callback.
             Args:
                 msg_encoder (:obj:`Compressed`) encoder ROS message.
         """
+        
         try:
             cv_image = self.bridge.compressed_imgmsg_to_cv2(image_msg)
         except ValueError as e:
@@ -209,15 +248,59 @@ class ATPoseNode(DTROS):
             return
 
         gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)
+        
+        # lane detection
+        edges = cv2.Canny(gray_img, 100, 200, apertureSize=3)
+        
+        minLineLength = 30
+        maxLineGap = 10
+        
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 15, minLineLength=minLineLength, maxLineGap=maxLineGap)
+        
+        if lines is None:
+            return
+        
+        if len(lines) == 0:
+            return
+        
+        
+        # display detected lines on the image
+        for x in range(0, len(lines)):
+            for x1, y1, x2, y2 in lines[x]:
+                cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                
+        
+        
+        
+        
+        frame = cv2.resize(rectified_img, None, fx=0.6, fy=0.6)
+        # Encode into JPEG
+        result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
+        # Send JPEG-encoded byte array
+        
+        # publish image frame to Azure cloud AMQ server
+        self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
+        
+        # camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
+        # detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
+        # detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
+        # array_for_pub = Int32MultiArray(data=detected_tag_ids)
+        # for tag_id, tag in zip(detected_tag_ids, detected_tags):
+        #     print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
+        #     self._broadcast_detected_tag(image_msg, tag_id, tag)
 
-        camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
-        detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
-        detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
-        array_for_pub = Int32MultiArray(data=detected_tag_ids)
-        self.tag_pub.publish(array_for_pub)
-        for tag_id, tag in zip(detected_tag_ids, detected_tags):
-            print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
-            self._broadcast_detected_tag(image_msg, tag_id, tag)
+        # self.tag_pub.publish(array_for_pub)
+        
+        axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        
+        # axes[1] = 0.2
+        
+        msg = Joy(header=None, axes=axes, buttons=buttons)
+        
+        # self.motion_pub.publish(msg)
+        rospy.sleep(0.5)
+        
 
 
 if __name__ == "__main__":
