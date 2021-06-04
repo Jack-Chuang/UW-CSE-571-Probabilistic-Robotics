@@ -240,7 +240,7 @@ class ATPoseNode(DTROS):
         """
             TOF callback
         """
-        print(tof_msg)
+        print(tof_msg.range)
 
     def lane_detection(self, image_msg):
         """
