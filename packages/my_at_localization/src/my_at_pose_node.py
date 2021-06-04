@@ -20,6 +20,11 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Int32MultiArray 
 from tf.transformations import *
 
+<<<<<<< HEAD
+=======
+from sensor_msgs.msg import Range
+
+>>>>>>> e38812abb368be2bc03603b33149921b19395f58
 from sensor_msgs.msg import Joy
 
 # imports for AMQ
@@ -120,7 +125,15 @@ class ATPoseNode(DTROS):
             self.getCameraInfo,
             queue_size=1
         )
-
+        
+        tof_info_topic = f'/{self.veh}/front_center_tof_driver_node/range'
+        self.tof_info_sub = rospy.Subscriber(
+            tof_info_topic,
+            Range,
+            self.getTofInfo,
+            queue_size=1
+        )
+        
         self.image_pub = rospy.Publisher(f'/{self.veh}/rectified_image', Image, queue_size=10)
 
         self.tag_pub = rospy.Publisher(f'/{self.veh}/detected_tags', Int32MultiArray, queue_size=5)
@@ -225,7 +238,17 @@ class ATPoseNode(DTROS):
             translations=(-0.066, 0, -0.106),
             euler_angles=(0, -15 * math.pi / 180, 0)
         )
+<<<<<<< HEAD
 
+=======
+        
+    def getTofInfo(self, tof_msg):
+        """
+            TOF callback
+        """
+        print(tof_msg)
+    
+>>>>>>> e38812abb368be2bc03603b33149921b19395f58
     def lane_detection(self, image_msg):
         """
             Image callback.
