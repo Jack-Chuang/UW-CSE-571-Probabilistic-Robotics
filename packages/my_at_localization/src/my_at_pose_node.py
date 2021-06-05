@@ -20,8 +20,6 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Int32MultiArray 
 from tf.transformations import *
 
-from sensor_msgs.msg import Range
-
 from sensor_msgs.msg import Joy
 
 # imports for AMQ
@@ -34,6 +32,8 @@ from kombu import Producer
 from kombu import Queue
 import sys
 import time
+
+from sensor_msgs.msg import Range
 
 
 
@@ -72,7 +72,7 @@ class ATPoseNode(DTROS):
         self.Rectify = None
         
         # Default RabbitMQ server URI
-        self.rabbit_url = 'amqp://user2:rmq2021@usw-gp-vm.westus.cloudapp.azure.com:5672//'
+        self.rabbit_url = 'amqp://user4:rmq2021@usw-gp-vm.westus.cloudapp.azure.com:5672//'
 
         # Kombu Connection
         self.conn = Connection(self.rabbit_url)
@@ -80,11 +80,11 @@ class ATPoseNode(DTROS):
         
         # Kombu Exchange
         # - set delivery_mode to transient to prevent disk writes for faster delivery
-        self.exchange = Exchange("video-exchange", type="direct", delivery_mode=1)
-        self.video_producer = Producer(exchange=self.exchange, channel=self.channel, routing_key="video")
+        self.exchange = Exchange("xubot-exchange", type="direct", delivery_mode=1)
+        self.video_producer = Producer(exchange=self.exchange, channel=self.channel, routing_key="xubot-stream")
         
         # Kombu Queue
-        self.video_queue = Queue(name="video-queue", exchange=self.exchange, routing_key="video") 
+        self.video_queue = Queue(name="xubot-stream", exchange=self.exchange, routing_key="xubot-stream") 
         self.video_queue.maybe_bind(self.conn)
         self.video_queue.declare()
         
@@ -237,12 +237,14 @@ class ATPoseNode(DTROS):
             euler_angles=(0, -15 * math.pi / 180, 0)
         )
         
+    
     def getTofInfo(self, tof_msg):
         """
             TOF callback
         """
-        print(tof_msg)
-    
+        # print(tof_msg)
+        pass
+
     def lane_detection(self, image_msg):
         """
             Image callback.
@@ -258,16 +260,45 @@ class ATPoseNode(DTROS):
 
         new_cam, rectified_img = self.Rectify.rectify_full(cv_image)
 
-        try:
-            self.image_pub.publish(self.bridge.cv2_to_imgmsg(rectified_img, "bgr8"))
-        except ValueError as e:
-            self.logerr('Could not decode image: %s' % e)
-            return
+        # try:
+        #     self.image_pub.publish(self.bridge.cv2_to_imgmsg(rectified_img, "bgr8"))
+        # except ValueError as e:
+        #     self.logerr('Could not decode image: %s' % e)
+        #     return
 
-        gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)
+        img_hsv = cv2.cvtColor(rectified_img, cv2.COLOR_BGR2HSV)
+        
+        lower_yello = np.array([20, 40, 40])
+        upper_yello = np.array([45, 255, 255])
+        
+        lower_white = np.array([250, 250, 250])
+        upper_white = np.array([255, 255, 255])
+        
+        mask_yellow = cv2.inRange(img_hsv, lower_yello, upper_yello)
+        
+        # repair broken lines
+        kernel = np.ones((20,20), np.uint8)
+        
+        d_im = cv2.dilate(mask_yellow, kernel, iterations = 1)
+        e_im = cv2.erode(d_im, kernel, iterations = 1)
+        
+        # smoothing the image
+        kernel_smooth = np.ones((5,5), np.float32) / 25
+        
+        dist = cv2.filter2D(e_im, -1, kernel)
+        
+        res = np.maximum(e_im, mask_yellow)
+        
+        
+        (B, G, R) = cv2.split(rectified_img)
+        R[R < 230] = 0
+        R[R >= 230] = 255
+        R[G < 170] = 0
+        R[B < 115] = 0
+        
         
         # lane detection
-        edges = cv2.Canny(gray_img, 100, 200, apertureSize=3)
+        edges = cv2.Canny(img_hsv, 100, 200, apertureSize=3)
         
         minLineLength = 30
         maxLineGap = 10
@@ -282,20 +313,22 @@ class ATPoseNode(DTROS):
         
         
         # display detected lines on the image
-        for x in range(0, len(lines)):
-            for x1, y1, x2, y2 in lines[x]:
-                cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # for x in range(0, len(lines)):
+        #     for x1, y1, x2, y2 in lines[x]:
+        #         cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 
         
         
         
         
-        frame = cv2.resize(rectified_img, None, fx=0.6, fy=0.6)
+        frame = cv2.resize(dist, None, fx=0.6, fy=0.6)
         # Encode into JPEG
         result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
         # Send JPEG-encoded byte array
         
+        
         # publish image frame to Azure cloud AMQ server
+        print('res streamed')
         self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
         
         # camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
