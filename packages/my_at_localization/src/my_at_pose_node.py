@@ -245,6 +245,35 @@ class ATPoseNode(DTROS):
         # print(tof_msg)
         pass
 
+    def region_of_interests(self, edges):
+        """
+        helper function for clipping useful parts
+        """
+        height, width = edges.shape
+        mask = np.zeros_like(edges)
+        
+        # keep the bottom half of the screen
+        polygon = np.array([[
+            (0, height * 1 / 2),
+            (width, height * 1 / 2),
+            (width, height),
+            (0, height),
+        ]], np.float32)
+        
+        cv2.fillPoly(mask, np.int32([polygon]), 255)
+        
+        cropped_edges = cv2.bitwise_and(edges, mask)
+        return cropped_edges
+    
+    def detect_line_segments(self, cropped_edges):
+        rho = 1
+        angle = np.pi / 180
+        min_threshold = 10
+        line_segnments = cv2.HoughLinesP(cropped_edges, rho, angle, min_threshold, np.array([]), minLineLength=8, maxLineGap=4)
+        
+        return line_segnments
+        
+
     def lane_detection(self, image_msg):
         """
             Image callback.
@@ -274,9 +303,10 @@ class ATPoseNode(DTROS):
         lower_white = np.array([250, 250, 250])
         upper_white = np.array([255, 255, 255])
         
+        # image dilation
         mask_yellow = cv2.inRange(img_hsv, lower_yello, upper_yello)
         
-        # repair broken lines
+        # repair broken center lane detection
         kernel = np.ones((20,20), np.uint8)
         
         d_im = cv2.dilate(mask_yellow, kernel, iterations = 1)
@@ -284,44 +314,58 @@ class ATPoseNode(DTROS):
         
         # smoothing the image
         kernel_smooth = np.ones((5,5), np.float32) / 25
-        
         dist = cv2.filter2D(e_im, -1, kernel)
         
-        res = np.maximum(e_im, mask_yellow)
-        
-        
+        # RGB filter for white lane
         (B, G, R) = cv2.split(rectified_img)
         R[R < 230] = 0
         R[R >= 230] = 255
         R[G < 170] = 0
         R[B < 115] = 0
         
+        G[G < 230] = 0
+        G[G >= 230] = 255
+        
+        
+        
+        B[B < 230] = 0
+        B[B >= 230] = 255
+        
+        res_rg = np.maximum(R, G)
+        
+        res_rgb = np.maximum(res_rg, B)
+        
+        # repair the white lane detection
+        kernel_white = np.ones((25,25), np.uint8)
+        d_res_rgb = cv2.dilate(res_rgb, kernel_white, iterations = 1)
+        e_res_rgb = cv2.erode(d_res_rgb, kernel_white, iterations = 1)
+        
+        res_center_lane = np.maximum(dist, e_res_rgb)
+        
+        res_center_lane = cv2.blur(res_center_lane, (11, 11))
         
         # lane detection
-        edges = cv2.Canny(img_hsv, 100, 200, apertureSize=3)
+        edges = cv2.Canny(res_center_lane, 200, 400)
         
-        minLineLength = 30
-        maxLineGap = 10
+        cropped_edges = self.region_of_interests(edges)
         
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 15, minLineLength=minLineLength, maxLineGap=maxLineGap)
+        line_segnments = self.detect_line_segments(cropped_edges)
         
-        if lines is None:
+
+        if line_segnments is None:
             return
         
-        if len(lines) == 0:
+        if len(line_segnments) == 0:
             return
         
         
         # display detected lines on the image
-        # for x in range(0, len(lines)):
-        #     for x1, y1, x2, y2 in lines[x]:
-        #         cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        for x in range(0, len(line_segnments)):
+            for x1, y1, x2, y2 in line_segnments[x]:
+                cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 
         
-        
-        
-        
-        frame = cv2.resize(dist, None, fx=0.6, fy=0.6)
+        frame = cv2.resize(res_center_lane, None, fx=0.6, fy=0.6)
         # Encode into JPEG
         result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
         # Send JPEG-encoded byte array
@@ -331,15 +375,6 @@ class ATPoseNode(DTROS):
         print('res streamed')
         self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
         
-        # camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
-        # detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
-        # detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
-        # array_for_pub = Int32MultiArray(data=detected_tag_ids)
-        # for tag_id, tag in zip(detected_tag_ids, detected_tags):
-        #     print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
-        #     self._broadcast_detected_tag(image_msg, tag_id, tag)
-
-        # self.tag_pub.publish(array_for_pub)
         
         axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -349,7 +384,7 @@ class ATPoseNode(DTROS):
         msg = Joy(header=None, axes=axes, buttons=buttons)
         
         # self.motion_pub.publish(msg)
-        rospy.sleep(0.5)
+        rospy.sleep(0.2)
         
 
 
