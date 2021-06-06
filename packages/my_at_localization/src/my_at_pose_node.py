@@ -24,6 +24,9 @@ from sensor_msgs.msg import Range
 
 from sensor_msgs.msg import Joy
 
+import matplotlib.pylab as plt
+import math
+
 # imports for AMQ
 
 import datetime
@@ -69,9 +72,14 @@ class ATPoseNode(DTROS):
         self.bridge = CvBridge()
         self.camera_info = None
         self.Rectify = None
+        self.joy_msg = None
+        self.tof_msg = None
+        self.keep_distance = 0.2
+        self.integral = 0
+        self.last_error = 0
         
         # Default RabbitMQ server URI
-        self.rabbit_url = 'amqp://user2:rmq2021@usw-gp-vm.westus.cloudapp.azure.com:5672//'
+        self.rabbit_url = 'amqp://user3:rmq2021@usw-gp-vm.westus.cloudapp.azure.com:5672//'
 
         # Kombu Connection
         self.conn = Connection(self.rabbit_url)
@@ -240,7 +248,39 @@ class ATPoseNode(DTROS):
         """
             TOF callback
         """
-        print(tof_msg.range)
+        self.tof_msg = tof_msg
+        axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        ## distance message from the tof
+        print("tof_msg.range: ", self.tof_msg.range)
+        if self.tof_msg.range < 0.4:
+            ##### car following #####
+            distance_ratio = 0
+            visual_distance = 0
+            predict_distance = 0
+            predict_distance = (4*self.tof_msg.range + 0*visual_distance)/4
+            print("predict_distance: ", predict_distance)
+            error = predict_distance - self.keep_distance
+            dt = 0.5
+            kp = 0.8
+            ki = 0.05
+            kd = 0.8
+            proportional = error
+            self.integral += error*dt
+            derivative = (error - self.last_error) / dt
+            output_speed = kp*proportional + ki*self.integral + kd*derivative
+            self.last_error = error
+
+            axes[1] = output_speed*0.5
+
+            self.joy_msg = Joy(header=None, axes=axes, buttons=buttons)
+    
+            self.motion_pub.publish(self.joy_msg)
+
+            rospy.sleep(0.5)
+
+
 
     def lane_detection(self, image_msg):
         """
@@ -248,7 +288,6 @@ class ATPoseNode(DTROS):
             Args:
                 msg_encoder (:obj:`Compressed`) encoder ROS message.
         """
-        
         try:
             cv_image = self.bridge.compressed_imgmsg_to_cv2(image_msg)
         except ValueError as e:
@@ -257,65 +296,150 @@ class ATPoseNode(DTROS):
 
         new_cam, rectified_img = self.Rectify.rectify_full(cv_image)
 
-        try:
-            self.image_pub.publish(self.bridge.cv2_to_imgmsg(rectified_img, "bgr8"))
-        except ValueError as e:
-            self.logerr('Could not decode image: %s' % e)
-            return
+        # try:
+        #     self.image_pub.publish(self.bridge.cv2_to_imgmsg(rectified_img, "bgr8"))
+        # except ValueError as e:
+        #     self.logerr('Could not decode image: %s' % e)
+        #     return
 
-        gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)
-        
-        # lane detection
-        edges = cv2.Canny(gray_img, 100, 200, apertureSize=3)
-        
-        minLineLength = 30
-        maxLineGap = 10
-        
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 15, minLineLength=minLineLength, maxLineGap=maxLineGap)
-        
-        if lines is None:
-            return
-        
-        if len(lines) == 0:
-            return
-        
-        
-        # display detected lines on the image
-        for x in range(0, len(lines)):
-            for x1, y1, x2, y2 in lines[x]:
-                cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        # buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        # ## distance message from the tof
+        # print("tof_msg.range: ", self.tof_msg.range)
+        # if self.tof_msg.range < 0.4:
+        #     ##### car following #####
+        #     distance_ratio = 0
+        #     visual_distance = 0
+        #     predict_distance = 0
+
+        #     ## disance calculation from the image
+
+
+
+        #     # RGB filter
+        #     (B, G, R) = cv2.split(rectified_img)
+        #     R[R < 250] = 0
+        #     R[R >= 250] = 255
+        #     R[G < 250] = 0
+        #     R[B < 250] = 0
+
+        #     # HLS filter
+        #     hls = cv2.cvtColor(rectified_img, cv2.COLOR_BGR2HLS)
+
+        #     (h, l, s) = cv2.split(hls)
+
+        #     l[l < int(255 * 0.99)] = 0
+        #     l[l >= int(255 * 0.99)] = 255
+
+        #     R[l < 255] = 0
+
+        #     # gaussian blur
+        #     kernel = np.ones((7,7), np.uint8)
+
+        #     d_im = cv2.dilate(R, kernel, iterations=1)
+
+        #     e_im = cv2.erode(d_im, kernel, iterations=1)
+
+        #     contours = cv2.findContours(e_im, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        #     contours = contours[0] if len(contours) == 2 else contours[1]
+
+        #     centroids = []
+        #     for c in contours:
+        #         if len(c) < 10:
+        #             continue
                 
-        
-        
-        
-        
-        frame = cv2.resize(rectified_img, None, fx=0.6, fy=0.6)
-        # Encode into JPEG
-        result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
-        # Send JPEG-encoded byte array
-        
-        # publish image frame to Azure cloud AMQ server
-        self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
-        
-        # camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
-        # detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
-        # detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
-        # array_for_pub = Int32MultiArray(data=detected_tag_ids)
-        # for tag_id, tag in zip(detected_tag_ids, detected_tags):
-        #     print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
-        #     self._broadcast_detected_tag(image_msg, tag_id, tag)
+        #         x_sum = 0
+        #         y_sum = 0
+        #         for p in c:
+        #             x_sum += p[0][0]
+        #             y_sum += p[0][1]
+                
+        #         x_avg = x_sum / len(c)
+        #         y_avg = y_sum / len(c)
+        #         centroids.append([x_avg, y_avg])
 
-        # self.tag_pub.publish(array_for_pub)
+        #         cv2.circle(rectified_img, (int(x_avg), int(y_avg)), 10, (0,0,255), -1)
+
+        #     if len(centroids) != 0:
+        #         distance_ratio = math.sqrt((centroids[1][0] - centroids[0][0])**2 + (centroids[1][1] - centroids[0][1])**2) / rectified_img.shape[1]
+
+        #     if (distance_ratio < 0.5485) or (distance_ratio >= 0.46):
+        #         visual_distance = 3.75 + (5.94 - 3.75)/(0.46 - 0.5485)*(distance_ratio - 0.5485)
+        #     elif (distance_ratio < 0.46) or (distance_ratio >= 0.3388):
+        #         visual_distance = 5.94 + (9.01 - 5.94)/(0.3388 - 0.46)*(distance_ratio - 0.46)
+        #     elif (distance_ratio < 0.3388) or (distance_ratio >= 0.2617):
+        #         visual_distance = 9.01 + (11.99 - 9.01)/(0.2617 - 0.3388)*(distance_ratio - 0.3388)
+        #     elif (distance_ratio < 0.2617) or (distance_ratio >= 0.2215):
+        #         visual_distance = 11.99 + (14.81 - 11.99)/(0.2215 - 0.2617)*(distance_ratio - 0.2617)
+        #     elif (distance_ratio < 0.2215) or (distance_ratio >= 0.1842):
+        #         visual_distance = 17.83 + (17.83 - 11.99)/(0.1842 - 0.2617)*(distance_ratio - 0.2215)
+        #     elif (distance_ratio < 0.1842) or (distance_ratio >= 0.1625):
+        #         visual_distance = 21.11 + (21.11 - 17.83)/(0.1625 - 0.1842)*(distance_ratio - 0.1842)
+        #     else:
+        #         pass
+            
+        #     predict_distance = (4*self.tof_msg.range + 0*visual_distance)/4
+        #     print("predict_distance: ", predict_distance)
+        #     error = predict_distance - self.keep_distance
+        #     dt = 0.002
+        #     kp = 0.4
+        #     ki = 0.1
+        #     kd = 0.4
+        #     proportional = error
+        #     self.integral += error*dt
+        #     derivative = (error - self.last_error) / dt
+        #     output_speed = kp*proportional + ki*self.integral + kd*derivative
+        #     self.last_error = error
+
+        #     axes[1] = output_speed
+
+        # else:
+        #     # gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)
         
-        axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        
-        # axes[1] = 0.2
-        
-        msg = Joy(header=None, axes=axes, buttons=buttons)
-        
-        # self.motion_pub.publish(msg)
-        rospy.sleep(0.5)
+        #     # ##### lane detection #####
+        #     # edges = cv2.Canny(gray_img, 100, 200, apertureSize=3)
+            
+        #     # minLineLength = 30
+        #     # maxLineGap = 10
+            
+        #     # lines = cv2.HoughLinesP(edges, 1, np.pi/180, 15, minLineLength=minLineLength, maxLineGap=maxLineGap)
+            
+        #     # if lines is None:
+        #     #     return
+            
+        #     # if len(lines) == 0:
+        #     #     return
+            
+        #     # # display detected lines on the image
+        #     # for x in range(0, len(lines)):
+        #     #     for x1, y1, x2, y2 in lines[x]:
+        #     #         cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            
+        #     # frame = cv2.resize(rectified_img, None, fx=0.6, fy=0.6)
+        #     # # Encode into JPEG
+        #     # result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
+        #     # # Send JPEG-encoded byte array
+            
+        #     # # publish image frame to Azure cloud AMQ server
+        #     # self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
+            
+        #     # # camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
+        #     # # detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
+        #     # # detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
+        #     # # array_for_pub = Int32MultiArray(data=detected_tag_ids)
+        #     # # for tag_id, tag in zip(detected_tag_ids, detected_tags):
+        #     # #     print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
+        #     # #     self._broadcast_detected_tag(image_msg, tag_id, tag)
+
+        #     # # self.tag_pub.publish(array_for_pub)
+            
+        #     # rospy.sleep(0.5)
+        #     pass
+                
+        # self.joy_msg = Joy(header=None, axes=axes, buttons=buttons)
+    
+        # self.motion_pub.publish(self.joy_msg)
         
 
 

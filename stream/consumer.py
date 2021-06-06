@@ -7,7 +7,7 @@ from kombu import Connection, Exchange, Queue
 from kombu.mixins import ConsumerMixin
 
 # Default RabbitMQ server URI
-rabbit_url = 'amqp://user1:rmq2021@usw-gp-vm.westus.cloudapp.azure.com:5672//'
+rabbit_url = 'amqp://user4:rmq2021@usw-gp-vm.westus.cloudapp.azure.com:5672//'
 
 # Kombu Message Consuming Worker
 class Worker(ConsumerMixin):
