@@ -249,38 +249,6 @@ class ATPoseNode(DTROS):
             TOF callback
         """
         self.tof_msg = tof_msg
-        axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-        ## distance message from the tof
-        print("tof_msg.range: ", self.tof_msg.range)
-        if self.tof_msg.range < 0.4:
-            ##### car following #####
-            distance_ratio = 0
-            visual_distance = 0
-            predict_distance = 0
-            predict_distance = (4*self.tof_msg.range + 0*visual_distance)/4
-            print("predict_distance: ", predict_distance)
-            error = predict_distance - self.keep_distance
-            dt = 0.5
-            kp = 0.8
-            ki = 0.05
-            kd = 0.8
-            proportional = error
-            self.integral += error*dt
-            derivative = (error - self.last_error) / dt
-            output_speed = kp*proportional + ki*self.integral + kd*derivative
-            self.last_error = error
-
-            axes[1] = output_speed*0.5
-
-            self.joy_msg = Joy(header=None, axes=axes, buttons=buttons)
-    
-            self.motion_pub.publish(self.joy_msg)
-
-            rospy.sleep(0.5)
-
-
 
     def lane_detection(self, image_msg):
         """
@@ -302,144 +270,191 @@ class ATPoseNode(DTROS):
         #     self.logerr('Could not decode image: %s' % e)
         #     return
 
-        # axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        # buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         # ## distance message from the tof
-        # print("tof_msg.range: ", self.tof_msg.range)
-        # if self.tof_msg.range < 0.4:
-        #     ##### car following #####
-        #     distance_ratio = 0
-        #     visual_distance = 0
-        #     predict_distance = 0
+        print("tof_msg.range: ", self.tof_msg.range)
+        if self.tof_msg.range < 0.4:
+            ##### car following #####
+            distance_ratio = 0
+            visual_distance = 0
+            predict_distance = 0
 
-        #     ## disance calculation from the image
+            ## disance calculation from the image
 
+            # RGB filter
+            (B, G, R) = cv2.split(rectified_img)
+            R[R < 250] = 0
+            R[R >= 250] = 255
+            R[G < 250] = 0
+            R[B < 250] = 0
 
+            # HLS filter
+            hls = cv2.cvtColor(rectified_img, cv2.COLOR_BGR2HLS)
 
-        #     # RGB filter
-        #     (B, G, R) = cv2.split(rectified_img)
-        #     R[R < 250] = 0
-        #     R[R >= 250] = 255
-        #     R[G < 250] = 0
-        #     R[B < 250] = 0
+            (h, l, s) = cv2.split(hls)
 
-        #     # HLS filter
-        #     hls = cv2.cvtColor(rectified_img, cv2.COLOR_BGR2HLS)
+            l[l < int(255 * 0.99)] = 0
+            l[l >= int(255 * 0.99)] = 255
 
-        #     (h, l, s) = cv2.split(hls)
+            R[l < 255] = 0
 
-        #     l[l < int(255 * 0.99)] = 0
-        #     l[l >= int(255 * 0.99)] = 255
+            # gaussian blur
+            kernel = np.ones((7,7), np.uint8)
 
-        #     R[l < 255] = 0
+            d_im = cv2.dilate(R, kernel, iterations=1)
 
-        #     # gaussian blur
-        #     kernel = np.ones((7,7), np.uint8)
+            e_im = cv2.erode(d_im, kernel, iterations=1)
 
-        #     d_im = cv2.dilate(R, kernel, iterations=1)
+            contours = cv2.findContours(e_im, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            contours = contours[0] if len(contours) == 2 else contours[1]
 
-        #     e_im = cv2.erode(d_im, kernel, iterations=1)
-
-        #     contours = cv2.findContours(e_im, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        #     contours = contours[0] if len(contours) == 2 else contours[1]
-
-        #     centroids = []
-        #     for c in contours:
-        #         if len(c) < 10:
-        #             continue
+            centroids = []
+            for c in contours:
+                if len(c) < 10:
+                    continue
                 
-        #         x_sum = 0
-        #         y_sum = 0
-        #         for p in c:
-        #             x_sum += p[0][0]
-        #             y_sum += p[0][1]
+                x_sum = 0
+                y_sum = 0
+                for p in c:
+                    x_sum += p[0][0]
+                    y_sum += p[0][1]
                 
-        #         x_avg = x_sum / len(c)
-        #         y_avg = y_sum / len(c)
-        #         centroids.append([x_avg, y_avg])
+                x_avg = x_sum / len(c)
+                y_avg = y_sum / len(c)
+                centroids.append([x_avg, y_avg])
 
-        #         cv2.circle(rectified_img, (int(x_avg), int(y_avg)), 10, (0,0,255), -1)
+                cv2.circle(rectified_img, (int(x_avg), int(y_avg)), 10, (0,0,255), -1)
 
-        #     if len(centroids) != 0:
-        #         distance_ratio = math.sqrt((centroids[1][0] - centroids[0][0])**2 + (centroids[1][1] - centroids[0][1])**2) / rectified_img.shape[1]
+            if len(centroids) != 0:
+                distance_ratio = math.sqrt((centroids[1][0] - centroids[0][0])**2 + (centroids[1][1] - centroids[0][1])**2) / rectified_img.shape[1]
 
-        #     if (distance_ratio < 0.5485) or (distance_ratio >= 0.46):
-        #         visual_distance = 3.75 + (5.94 - 3.75)/(0.46 - 0.5485)*(distance_ratio - 0.5485)
-        #     elif (distance_ratio < 0.46) or (distance_ratio >= 0.3388):
-        #         visual_distance = 5.94 + (9.01 - 5.94)/(0.3388 - 0.46)*(distance_ratio - 0.46)
-        #     elif (distance_ratio < 0.3388) or (distance_ratio >= 0.2617):
-        #         visual_distance = 9.01 + (11.99 - 9.01)/(0.2617 - 0.3388)*(distance_ratio - 0.3388)
-        #     elif (distance_ratio < 0.2617) or (distance_ratio >= 0.2215):
-        #         visual_distance = 11.99 + (14.81 - 11.99)/(0.2215 - 0.2617)*(distance_ratio - 0.2617)
-        #     elif (distance_ratio < 0.2215) or (distance_ratio >= 0.1842):
-        #         visual_distance = 17.83 + (17.83 - 11.99)/(0.1842 - 0.2617)*(distance_ratio - 0.2215)
-        #     elif (distance_ratio < 0.1842) or (distance_ratio >= 0.1625):
-        #         visual_distance = 21.11 + (21.11 - 17.83)/(0.1625 - 0.1842)*(distance_ratio - 0.1842)
-        #     else:
-        #         pass
+            if (distance_ratio < 0.5485) or (distance_ratio >= 0.46):
+                visual_distance = 3.75 + (5.94 - 3.75)/(0.46 - 0.5485)*(distance_ratio - 0.5485)
+            elif (distance_ratio < 0.46) or (distance_ratio >= 0.3388):
+                visual_distance = 5.94 + (9.01 - 5.94)/(0.3388 - 0.46)*(distance_ratio - 0.46)
+            elif (distance_ratio < 0.3388) or (distance_ratio >= 0.2617):
+                visual_distance = 9.01 + (11.99 - 9.01)/(0.2617 - 0.3388)*(distance_ratio - 0.3388)
+            elif (distance_ratio < 0.2617) or (distance_ratio >= 0.2215):
+                visual_distance = 11.99 + (14.81 - 11.99)/(0.2215 - 0.2617)*(distance_ratio - 0.2617)
+            elif (distance_ratio < 0.2215) or (distance_ratio >= 0.1842):
+                visual_distance = 17.83 + (17.83 - 11.99)/(0.1842 - 0.2617)*(distance_ratio - 0.2215)
+            elif (distance_ratio < 0.1842) or (distance_ratio >= 0.1625):
+                visual_distance = 21.11 + (21.11 - 17.83)/(0.1625 - 0.1842)*(distance_ratio - 0.1842)
+            else:
+                pass
             
-        #     predict_distance = (4*self.tof_msg.range + 0*visual_distance)/4
-        #     print("predict_distance: ", predict_distance)
-        #     error = predict_distance - self.keep_distance
-        #     dt = 0.002
-        #     kp = 0.4
-        #     ki = 0.1
-        #     kd = 0.4
-        #     proportional = error
-        #     self.integral += error*dt
-        #     derivative = (error - self.last_error) / dt
-        #     output_speed = kp*proportional + ki*self.integral + kd*derivative
-        #     self.last_error = error
+            predict_distance = (4*self.tof_msg.range + 0*visual_distance)/4
+            print("predict_distance: ", predict_distance)
+            error = predict_distance - self.keep_distance
+            dt = 0.002
+            kp = 0.4
+            ki = 0.1
+            kd = 0.4
+            proportional = error
+            self.integral += error*dt
+            derivative = (error - self.last_error) / dt
+            output_speed = kp*proportional + ki*self.integral + kd*derivative
+            self.last_error = error
 
-        #     axes[1] = output_speed
+            axes[1] = output_speed
 
-        # else:
-        #     # gray_img = cv2.cvtColor(rectified_img, cv2.COLOR_RGB2GRAY)
-        
-        #     # ##### lane detection #####
-        #     # edges = cv2.Canny(gray_img, 100, 200, apertureSize=3)
+        else:
+            img_hsv = cv2.cvtColor(rectified_img, cv2.COLOR_BGR2HSV)
             
-        #     # minLineLength = 30
-        #     # maxLineGap = 10
+            lower_yello = np.array([20, 40, 40])
+            upper_yello = np.array([45, 255, 255])
             
-        #     # lines = cv2.HoughLinesP(edges, 1, np.pi/180, 15, minLineLength=minLineLength, maxLineGap=maxLineGap)
+            lower_white = np.array([250, 250, 250])
+            upper_white = np.array([255, 255, 255])
             
-        #     # if lines is None:
-        #     #     return
+            # image dilation
+            mask_yellow = cv2.inRange(img_hsv, lower_yello, upper_yello)
             
-        #     # if len(lines) == 0:
-        #     #     return
+            # repair broken center lane detection
+            kernel = np.ones((20,20), np.uint8)
             
-        #     # # display detected lines on the image
-        #     # for x in range(0, len(lines)):
-        #     #     for x1, y1, x2, y2 in lines[x]:
-        #     #         cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            d_im = cv2.dilate(mask_yellow, kernel, iterations = 1)
+            e_im = cv2.erode(d_im, kernel, iterations = 1)
             
-        #     # frame = cv2.resize(rectified_img, None, fx=0.6, fy=0.6)
-        #     # # Encode into JPEG
-        #     # result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
-        #     # # Send JPEG-encoded byte array
+            # smoothing the image
+            kernel_smooth = np.ones((5,5), np.float32) / 25
+            dist = cv2.filter2D(e_im, -1, kernel)
             
-        #     # # publish image frame to Azure cloud AMQ server
-        #     # self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
+            # RGB filter for white lane
+            (B, G, R) = cv2.split(rectified_img)
+            R[R < 230] = 0
+            R[R >= 230] = 255
+            R[G < 170] = 0
+            R[B < 115] = 0
             
-        #     # # camera_params = (new_cam[0, 0], new_cam[1, 1], new_cam[0, 2], new_cam[1, 2])
-        #     # # detected_tags = self.at_detector.detect(gray_img, estimate_tag_pose=True, camera_params=camera_params, tag_size=0.065)
-        #     # # detected_tag_ids = list(map(lambda x: fetch_tag_id(x), detected_tags))
-        #     # # array_for_pub = Int32MultiArray(data=detected_tag_ids)
-        #     # # for tag_id, tag in zip(detected_tag_ids, detected_tags):
-        #     # #     print('detected {}: ({}, {})'.format(tag_id, image_msg.header.stamp.to_time(), rospy.Time.now().to_time()))
-        #     # #     self._broadcast_detected_tag(image_msg, tag_id, tag)
+            G[G < 230] = 0
+            G[G >= 230] = 255
+            
+            
+            
+            B[B < 230] = 0
+            B[B >= 230] = 255
+            
+            res_rg = np.maximum(R, G)
+            
+            res_rgb = np.maximum(res_rg, B)
+            
+            # repair the white lane detection
+            kernel_white = np.ones((25,25), np.uint8)
+            d_res_rgb = cv2.dilate(res_rgb, kernel_white, iterations = 1)
+            e_res_rgb = cv2.erode(d_res_rgb, kernel_white, iterations = 1)
+            
+            res_center_lane = np.maximum(dist, e_res_rgb)
+            
+            res_center_lane = cv2.blur(res_center_lane, (11, 11))
+            
+            # lane detection
+            edges = cv2.Canny(res_center_lane, 200, 400)
+            
+            cropped_edges = self.region_of_interests(edges)
+            
+            line_segnments = self.detect_line_segments(cropped_edges)
+            
 
-        #     # # self.tag_pub.publish(array_for_pub)
+            if line_segnments is None:
+                return
             
-        #     # rospy.sleep(0.5)
-        #     pass
+            if len(line_segnments) == 0:
+                return
+            
+            
+            # display detected lines on the image
+            for x in range(0, len(line_segnments)):
+                for x1, y1, x2, y2 in line_segnments[x]:
+                    cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    
+            
+            frame = cv2.resize(res_center_lane, None, fx=0.6, fy=0.6)
+            # Encode into JPEG
+            result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
+            # Send JPEG-encoded byte array
+            
+            
+            # publish image frame to Azure cloud AMQ server
+            print('res streamed')
+            self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
+            
+            
+            axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            
+            # axes[1] = 0.2
+            
+            msg = Joy(header=None, axes=axes, buttons=buttons)
+            
+            # self.motion_pub.publish(msg)
+            rospy.sleep(0.2)
                 
-        # self.joy_msg = Joy(header=None, axes=axes, buttons=buttons)
+        self.joy_msg = Joy(header=None, axes=axes, buttons=buttons)
     
-        # self.motion_pub.publish(self.joy_msg)
+        self.motion_pub.publish(self.joy_msg)
         
 
 
