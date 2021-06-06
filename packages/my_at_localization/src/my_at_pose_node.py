@@ -78,6 +78,8 @@ class ATPoseNode(DTROS):
         self.conn = Connection(self.rabbit_url)
         self.channel = self.conn.channel()
         
+        self.curr_steering_angle = 0
+        
         # Kombu Exchange
         # - set delivery_mode to transient to prevent disk writes for faster delivery
         self.exchange = Exchange("xubot-exchange", type="direct", delivery_mode=1)
@@ -272,7 +274,129 @@ class ATPoseNode(DTROS):
         line_segnments = cv2.HoughLinesP(cropped_edges, rho, angle, min_threshold, np.array([]), minLineLength=8, maxLineGap=4)
         
         return line_segnments
+    
+    
+    def make_points(self, frame, line):
+        height, width, _ = frame.shape
+        slope, intercept = line
+        y1 = height  # bottom of the frame
+        y2 = int(y1 * 1 / 2)  # make points from middle of the frame down
+
+        # bound the coordinates within the frame
+        x1 = max(-width, min(2 * width, int((y1 - intercept) / slope)))
+        x2 = max(-width, min(2 * width, int((y2 - intercept) / slope)))
+        return [[x1, y1, x2, y2]]
+
+    def average_slope_intercept(self, frame, line_segments):
+        """
+        This function combines line segments into one or two lane lines
+        If all line slopes are < 0: then we only have detected left lane
+        If all line slopes are > 0: then we only have detected right lane
+        """
+        lane_lines = []
+        if line_segments is None:
+            logging.info('No line_segment segments detected')
+            return lane_lines
+
+        height, width, _ = frame.shape
+        left_fit = []
+        right_fit = []
+
+        boundary = 1/3
+        left_region_boundary = width * (1 - boundary)  # left lane line segment should be on left 2/3 of the screen
+        right_region_boundary = width * boundary # right lane line segment should be on left 2/3 of the screen
+
+        for line_segment in line_segments:
+            for x1, y1, x2, y2 in line_segment:
+                if x1 == x2:
+                    continue
+                fit = np.polyfit((x1, x2), (y1, y2), 1)
+                slope = fit[0]
+                intercept = fit[1]
+                if slope < 0:
+                    if x1 < left_region_boundary and x2 < left_region_boundary:
+                        left_fit.append((slope, intercept))
+                else:
+                    if x1 > right_region_boundary and x2 > right_region_boundary:
+                        right_fit.append((slope, intercept))
+
+        left_fit_average = np.average(left_fit, axis=0)
+        if len(left_fit) > 1:
+            lane_lines.append(self.make_points(frame, left_fit_average))
+
+        right_fit_average = np.average(right_fit, axis=0)
+        if len(right_fit) > 1:
+            lane_lines.append(self.make_points(frame, right_fit_average))
+
+
+
+        return lane_lines
+
+
+    def display_heading_line(self, frame, steering_angle, line_color=(0, 0, 255), line_width=5 ):
+        heading_image = np.zeros_like(frame)
+        height, width, _ = frame.shape
+
+        # figure out the heading line from steering angle
+        # heading line (x1,y1) is always center bottom of the screen
+        # (x2, y2) requires a bit of trigonometry
+
+        # Note: the steering angle of:
+        # 0-89 degree: turn left
+        # 90 degree: going straight
+        # 91-180 degree: turn right 
+        steering_angle_radian = steering_angle / 180.0 * math.pi
+        x1 = int(width / 2)
+        y1 = height
+        x2 = int(x1 - height / 2 / math.tan(steering_angle_radian))
+        y2 = int(height / 2)
+
+        cv2.line(heading_image, (x1, y1), (x2, y2), line_color, line_width)
+        heading_image = cv2.addWeighted(frame, 0.8, heading_image, 1, 1)
+
+        return heading_image
+
+
+    def get_xy_offset(self, lines_avg, width, height):
+        if len(lines_avg) == 1:
+            x1, _, x2, _ = lines_avg[0][0]
+            x_offset = x2 - x1
+            y_offset = int(height / 2)
+            
+            return x_offset, y_offset
+        _, _, left_x2, _ = lines_avg[0][0]
+        _, _, right_x2, _ = lines_avg[1][0]
+        mid = int(width / 2)
+        x_offset = (left_x2 + right_x2) / 2 - mid
+        y_offset = int(height / 2)
         
+        return x_offset, y_offset
+            
+    def stabilize_steering_angle(
+          curr_steering_angle, 
+          new_steering_angle, 
+          num_of_lane_lines, 
+          max_angle_deviation_two_lines=5, 
+          max_angle_deviation_one_lane=1):
+        """
+        Using last steering angle to stabilize the steering angle
+        if new angle is too different from current angle, 
+        only turn by max_angle_deviation degrees
+        """
+        if num_of_lane_lines == 2 :
+            # if both lane lines detected, then we can deviate more
+            max_angle_deviation = max_angle_deviation_two_lines
+        else :
+            # if only one lane detected, don't deviate too much
+            max_angle_deviation = max_angle_deviation_one_lane
+        
+        angle_deviation = new_steering_angle - curr_steering_angle
+        if abs(angle_deviation) > max_angle_deviation:
+            stabilized_steering_angle = int(curr_steering_angle
+                + max_angle_deviation * angle_deviation / abs(angle_deviation))
+        else:
+            stabilized_steering_angle = new_steering_angle
+        return stabilized_steering_angle
 
     def lane_detection(self, image_msg):
         """
@@ -289,19 +413,12 @@ class ATPoseNode(DTROS):
 
         new_cam, rectified_img = self.Rectify.rectify_full(cv_image)
 
-        # try:
-        #     self.image_pub.publish(self.bridge.cv2_to_imgmsg(rectified_img, "bgr8"))
-        # except ValueError as e:
-        #     self.logerr('Could not decode image: %s' % e)
-        #     return
 
         img_hsv = cv2.cvtColor(rectified_img, cv2.COLOR_BGR2HSV)
         
         lower_yello = np.array([20, 40, 40])
         upper_yello = np.array([45, 255, 255])
         
-        lower_white = np.array([250, 250, 250])
-        upper_white = np.array([255, 255, 255])
         
         # image dilation
         mask_yellow = cv2.inRange(img_hsv, lower_yello, upper_yello)
@@ -320,16 +437,12 @@ class ATPoseNode(DTROS):
         (B, G, R) = cv2.split(rectified_img)
         R[R < 230] = 0
         R[R >= 230] = 255
-        R[G < 170] = 0
-        R[B < 115] = 0
         
-        G[G < 230] = 0
-        G[G >= 230] = 255
+        G[G < 170] = 0
+        G[G >= 170] = 255
         
-        
-        
-        B[B < 230] = 0
-        B[B >= 230] = 255
+        B[B < 115] = 0
+        B[B >= 115] = 255
         
         res_rg = np.maximum(R, G)
         
@@ -342,30 +455,53 @@ class ATPoseNode(DTROS):
         
         res_center_lane = np.maximum(dist, e_res_rgb)
         
-        res_center_lane = cv2.blur(res_center_lane, (11, 11))
+        res_center_lane = cv2.blur(res_center_lane, (9, 9))
         
         # lane detection
-        edges = cv2.Canny(res_center_lane, 200, 400)
+        edges = cv2.Canny(res_center_lane, 50,200,apertureSize = 3)
         
         cropped_edges = self.region_of_interests(edges)
         
-        line_segnments = self.detect_line_segments(cropped_edges)
+        line_segments = self.detect_line_segments(cropped_edges)
         
+        lines_avg = self.average_slope_intercept(rectified_img, line_segments)
 
-        if line_segnments is None:
+        if lines_avg is None:
             return
         
-        if len(line_segnments) == 0:
+        if len(lines_avg) == 0:
             return
         
+        # _, _, left_x2, _ = lines_avg[0][0]
+        # _, _, right_x2, _ = lines_avg[1][0]
+        # mid = int(width / 2)
+        # x_offset = (left_x2 + right_x2) / 2 - mid
+        # y_offset = int(height / 2)
         
         # display detected lines on the image
-        for x in range(0, len(line_segnments)):
-            for x1, y1, x2, y2 in line_segnments[x]:
-                cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                
+        for x in range(0, len(lines_avg)):
+            for x1, y1, x2, y2 in lines_avg[x]:
+                cv2.line(rectified_img, (x1, y1), (x2, y2), (0, 255, 0), 4)
         
-        frame = cv2.resize(res_center_lane, None, fx=0.6, fy=0.6)
+        height, width, _ = rectified_img.shape
+        
+        x_offset, y_offset = self.get_xy_offset(lines_avg, width, height)
+        
+        angle_to_mid_radian = math.atan(x_offset / y_offset)  # angle (in radian) to center vertical line
+        angle_to_mid_deg = int(angle_to_mid_radian * 180.0 / math.pi)  # angle (in degrees) to center vertical line
+        
+        
+        steering_angle = angle_to_mid_deg + 90  # this is the steering angle needed by Duckiebot
+        print(steering_angle)
+        
+        
+        
+        heading_img = self.display_heading_line(rectified_img, steering_angle)
+        
+        
+        
+        
+        frame = cv2.resize(heading_img, None, fx=0.6, fy=0.6)
         # Encode into JPEG
         result, imgencode = cv2.imencode('.jpg', frame, self.encode_param)
         # Send JPEG-encoded byte array
@@ -384,7 +520,7 @@ class ATPoseNode(DTROS):
         msg = Joy(header=None, axes=axes, buttons=buttons)
         
         # self.motion_pub.publish(msg)
-        rospy.sleep(0.2)
+        rospy.sleep(0.5)
         
 
 
