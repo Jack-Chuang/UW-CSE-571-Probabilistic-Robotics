@@ -348,10 +348,10 @@ class ATPoseNode(DTROS):
             predict_distance = (4*self.tof_msg.range + 0*visual_distance)/4
             print("predict_distance: ", predict_distance)
             error = predict_distance - self.keep_distance
-            dt = 0.002
-            kp = 0.4
+            dt = 0.2
+            kp = 0.2
             ki = 0.1
-            kd = 0.4
+            kd = 0.8
             proportional = error
             self.integral += error*dt
             derivative = (error - self.last_error) / dt
