@@ -34,7 +34,7 @@ import sys
 import time
 
 from sensor_msgs.msg import Range
-
+from duckietown_msgs.msg import Twist2DStamped, LanePose, WheelsCmdStamped, BoolStamped, FSMState, StopLineReading
 
 
 
@@ -140,6 +140,18 @@ class ATPoseNode(DTROS):
         
         self.motion_pub = rospy.Publisher(f'/{self.veh}/joy', Joy, queue_size=1)
         
+        # variable for controlling wheels' speed
+        self.msg_wheels_cmd = WheelsCmdStamped()
+        
+        self.pub_wheels_cmd = rospy.Publisher(
+            "~wheels_cmd_executed",
+            WheelsCmdStamped,
+            queue_size=1,
+            dt_topic_type=TopicType.DRIVER
+        )
+        
+        self.pose_msg = LanePose()
+        
         self.log("Initialized!")
 
     def getCameraInfo(self, cam_msg):
@@ -239,6 +251,24 @@ class ATPoseNode(DTROS):
             euler_angles=(0, -15 * math.pi / 180, 0)
         )
         
+        # Construct publishers
+        self.pub_car_cmd = rospy.Publisher("~car_cmd",
+            Twist2DStamped,
+            queue_size=1,
+            dt_topic_type=TopicType.CONTROL
+        )
+        
+    
+    def publishCmd(self, car_cmd_msg):
+        """Publishes a car command message.
+        Args:
+            car_cmd_msg (:obj:`Twist2DStamped`): Message containing the requested control action.
+        """
+        self.pub_car_cmd.publish(car_cmd_msg)
+        
+    
+        
+        
     
     def getTofInfo(self, tof_msg):
         """
@@ -295,7 +325,6 @@ class ATPoseNode(DTROS):
         """
         lane_lines = []
         if line_segments is None:
-            logging.info('No line_segment segments detected')
             return lane_lines
 
         height, width, _ = frame.shape
@@ -373,7 +402,6 @@ class ATPoseNode(DTROS):
         return x_offset, y_offset
             
     def stabilize_steering_angle(
-          curr_steering_angle, 
           new_steering_angle, 
           num_of_lane_lines, 
           max_angle_deviation_two_lines=5, 
@@ -383,20 +411,22 @@ class ATPoseNode(DTROS):
         if new angle is too different from current angle, 
         only turn by max_angle_deviation degrees
         """
-        if num_of_lane_lines == 2 :
+        if num_of_lane_lines == 2:
             # if both lane lines detected, then we can deviate more
             max_angle_deviation = max_angle_deviation_two_lines
-        else :
+        else:
             # if only one lane detected, don't deviate too much
             max_angle_deviation = max_angle_deviation_one_lane
         
-        angle_deviation = new_steering_angle - curr_steering_angle
+        angle_deviation = new_steering_angle - self.curr_steering_angle
         if abs(angle_deviation) > max_angle_deviation:
-            stabilized_steering_angle = int(curr_steering_angle
+            stabilized_steering_angle = int(self.curr_steering_angle
                 + max_angle_deviation * angle_deviation / abs(angle_deviation))
         else:
             stabilized_steering_angle = new_steering_angle
         return stabilized_steering_angle
+    
+
 
     def lane_detection(self, image_msg):
         """
@@ -495,10 +525,34 @@ class ATPoseNode(DTROS):
         print(steering_angle)
         
         
+        # self.msg_wheels_cmd.header = "~wheels_cmd"
+        # self.msg_wheels_cmd.header.stamp = rospy.get_rostime()
         
+        # Initialize car control msg, add header from input message
+        car_control_msg = Twist2DStamped()
+        car_control_msg.header = self.pose_msg.header
+        
+        # Add commands to car message
+        car_control_msg.v = 0
+        car_control_msg.omega = 0
+        
+        axes = [0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        
+        if angle_to_mid_deg > 8:
+            car_control_msg.omega = 0.4 * angle_to_mid_deg / 90
+            axes = [0.0, 0.1, 0.0, -0.35 * angle_to_mid_deg / 90, 0.0, 0.0, 0.0, 0.0] 
+            print('steer left')
+        elif angle_to_mid_deg < -8:
+            print('steer right')
+            car_control_msg.omega = 0.4 * angle_to_mid_deg / 90
+            axes = [0.0, 0.1, 0.0, 0.35 * angle_to_mid_deg / 90, 0.0, 0.0, 0.0, 0.0] 
+        
+        print(angle_to_mid_deg)
+        print(axes)
+
+
         heading_img = self.display_heading_line(rectified_img, steering_angle)
-        
-        
         
         
         frame = cv2.resize(heading_img, None, fx=0.6, fy=0.6)
@@ -510,17 +564,13 @@ class ATPoseNode(DTROS):
         # publish image frame to Azure cloud AMQ server
         print('res streamed')
         self.video_producer.publish(imgencode.tobytes(), content_type='image/jpeg', content_encoding='binary')
+
+
+
+        msg = Joy(header=None, axes=axes, buttons=None)
         
-        
-        axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        
-        # axes[1] = 0.2
-        
-        msg = Joy(header=None, axes=axes, buttons=buttons)
-        
-        # self.motion_pub.publish(msg)
-        rospy.sleep(0.5)
+        self.motion_pub.publish(msg)
+        rospy.sleep(0.1)
         
 
 
